@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: snapcalorie
+      POSTGRES_PASSWORD: snapcalorie
+      POSTGRES_DB: snapcalorie
+    ports:
+      - "5432:5432"
+    volumes:
+      - snapcalorie_pg_data:/var/lib/postgresql/data
+
+volumes:
+  snapcalorie_pg_data:

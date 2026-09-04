@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://snapcalorie:snapcalorie@localhost:5432/snapcalorie
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: snapcalorie
+          POSTGRES_PASSWORD: snapcalorie
+          POSTGRES_DB: snapcalorie
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U snapcalorie"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
