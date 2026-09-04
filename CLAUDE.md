@@ -22,7 +22,14 @@ Next.js 15 (App Router) + TypeScript (strict) · PostgreSQL + Drizzle ORM · Tai
 ## Commands
 
 - `npm run dev` — start the dev server
-- `docker compose up -d` — start local Postgres
-- `npm run db:generate` / `npm run db:migrate` / `npm run db:studio` — Drizzle migrations
+- `docker compose up -d` — start local Postgres (if using Colima instead of Docker Desktop, run `colima start` first, and prefix docker/compose commands with `DOCKER_CONTEXT=colima` if multiple Colima profiles exist)
+- `npm run db:generate` / `npm run db:migrate` / `npm run db:studio` / `npm run db:seed` — Drizzle migrations + demo data
 - `npm run test` — Vitest
 - `npm run lint` / `npm run typecheck` / `npm run format:check`
+
+## Data access layer (Phase 1)
+
+- `src/db/schema.ts` — Drizzle schema for `users`, `meal_entries`, `meal_items`, `daily_summaries`.
+- `src/server/repositories/` — typed repository functions. `createMealEntryWithItems`, `updateMealEntry`, and `deleteMealEntry` each run in a single transaction and always call `recalculateDailySummary` for every affected local day afterward.
+- `src/server/lib/timezone.ts` — the only place day-boundary math should happen (`localDayRangeUtc`, `instantToLocalDate`), per the timezone-correctness rule above.
+- Macro/calorie arithmetic uses `decimal.js`; all `NUMERIC` columns round-trip as strings, not JS numbers.
