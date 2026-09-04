@@ -42,3 +42,12 @@ Next.js 15 (App Router) + TypeScript (strict) · PostgreSQL + Drizzle ORM · Tai
 - `Google({ allowDangerousEmailAccountLinking: true })` is required for FR-01's "same email reuses the same user" behavior — this is Auth.js's own documented opt-in, not an oversight.
 - `src/middleware.ts` uses `next-auth/jwt`'s `getToken()` directly instead of importing `@/auth` — importing the full config would pull `pg` and `bcryptjs` into the Edge middleware bundle and break it. Extend `PROTECTED_PREFIXES` there (and rely on the `(app)` layout's server-side `auth()` check as a backstop) as new protected routes are added in later phases.
 - Google OAuth needs real `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` credentials to test; email/password needs no external setup. See README "Testing auth end to end".
+
+## Vision service (Phase 3)
+
+- `src/server/vision/types.ts` is the provider-agnostic contract (`INutritionVisionService`, `AnalysisResult`, `DetectedFood`, `FoodSearchResult`). Nothing provider-specific may leak into it — no vendor SDK types, ever.
+- **Every `DetectedFood` carries `per100g`.** Phase 6's portion-edit rescaling (`value_new = value_0 × (m_new / m_0)`, see rule above) needs that fixed baseline — don't drop it when a later phase touches this code.
+- `src/server/vision/factory.ts`'s `getVisionService()` is the only place `VISION_PROVIDER` is read. Call sites depend on the interface only, never on `MockVisionService` (or any future provider class) directly.
+- `src/server/vision/normalize.ts` maps `AnalysisResult` → `meal_items` row shape (fixed-point strings at the column scale, confidence clamped to `[0,1]`) — this is what Phase 5/6 should call before inserting, not ad-hoc rounding.
+- `src/server/vision/contract.ts`'s `runVisionServiceContractTests(label, factory)` must be run against any new provider implementation (openai/anthropic/google, when they land) in addition to that provider's own tests.
+- `MockVisionService` scenarios (`default | lowConfidence | singleItem | empty | timeout`) are the fixtures later phases should build their UI/tests against — see README "Vision service (mock)".

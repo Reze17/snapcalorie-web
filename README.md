@@ -40,12 +40,38 @@ URI). With those set, signing in with Google using the same email as an
 existing credentials account signs you into that same account (see
 `allowDangerousEmailAccountLinking` in `src/auth.ts`).
 
+## Vision service (mock)
+
+No UI yet — this phase is the `INutritionVisionService` interface plus a
+deterministic mock (`src/server/vision/`), for Phases 4-8 to build against
+without burning API calls or needing network access.
+
+```ts
+import { getVisionService } from "@/server/vision/factory";
+
+const vision = getVisionService(); // reads VISION_PROVIDER, defaults to "mock"
+const result = await vision.analyzeMealImage({ imageBuffer, mimeType });
+```
+
+- `VISION_PROVIDER=mock` (the default) returns a fixed 3-item plate (grilled
+  chicken breast, white rice, broccoli) with realistic macros and
+  confidences ~0.91/0.88/0.94.
+- Force a scenario via `MockVisionService` constructor options (in tests)
+  or `VISION_MOCK_SCENARIO` / `VISION_MOCK_LATENCY_MS` env vars (manual QA):
+  `default | lowConfidence | singleItem | empty | timeout`.
+- `openai` / `anthropic` / `google` are accepted by `VISION_PROVIDER` but
+  throw a clear "not implemented yet" error — later phases fill these in
+  without changing any call site.
+- `src/server/vision/contract.ts` is a reusable Vitest suite
+  (`runVisionServiceContractTests`) that any implementation must pass; run
+  against the mock in `mock-vision-service.test.ts`.
+
 ## Phase status
 
 - [x] Phase 0 — Scaffold, tooling & CI
 - [x] Phase 1 — Database schema & data layer
 - [x] Phase 2 — Auth, profile & calorie goal
-- [ ] Phase 3 — Provider adapter + mock vision service
+- [x] Phase 3 — Provider adapter + mock vision service
 - [ ] Phase 4 — Capture, upload & image pipeline
 - [ ] Phase 5 — Detection, portion & macro engine
 - [ ] Phase 6 — Review & edit screen
