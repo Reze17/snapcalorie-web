@@ -11,5 +11,35 @@ services:
     volumes:
       - snapcalorie_pg_data:/var/lib/postgresql/data
 
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: snapcalorie
+      MINIO_ROOT_PASSWORD: snapcalorie123
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # Web console
+    volumes:
+      - snapcalorie_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 snapcalorie snapcalorie123 &&
+      mc mb --ignore-existing local/snapcalorie-meals
+      "
+
 volumes:
   snapcalorie_pg_data:
+  snapcalorie_minio_data:

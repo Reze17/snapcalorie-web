@@ -9,7 +9,7 @@ import type { NextRequest } from "next/server";
 //
 // Extend this list as more routes land under src/app/(app)/. The (app)
 // layout also checks auth server-side as a defense-in-depth backstop.
-const PROTECTED_PREFIXES = ["/dashboard", "/profile"];
+const PROTECTED_PREFIXES = ["/dashboard", "/profile", "/capture", "/analyze"];
 
 export async function middleware(req: NextRequest) {
   const isProtected = PROTECTED_PREFIXES.some((prefix) =>
@@ -35,5 +35,10 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/profile/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/profile/:path*",
+    "/capture/:path*",
+    "/analyze/:path*",
+  ],
 };

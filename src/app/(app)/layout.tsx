@@ -17,6 +17,7 @@ export default async function AppLayout({
       <header className="mb-6 flex items-center justify-between">
         <nav className="flex gap-4 text-sm">
           <Link href="/dashboard">Dashboard</Link>
+          <Link href="/capture">Log meal</Link>
           <Link href="/profile">Profile</Link>
         </nav>
         <form

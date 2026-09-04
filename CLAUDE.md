@@ -22,10 +22,13 @@ Next.js 15 (App Router) + TypeScript (strict) · PostgreSQL + Drizzle ORM · Tai
 ## Commands
 
 - `npm run dev` — start the dev server
-- `docker compose up -d` — start local Postgres (if using Colima instead of Docker Desktop, run `colima start` first, and prefix docker/compose commands with `DOCKER_CONTEXT=colima` if multiple Colima profiles exist)
+- `docker compose up -d` — start local Postgres + MinIO (if using Colima instead of Docker Desktop, run `colima start` first, and prefix docker/compose commands with `DOCKER_CONTEXT=colima` if multiple Colima profiles exist)
 - `npm run db:generate` / `npm run db:migrate` / `npm run db:studio` / `npm run db:seed` — Drizzle migrations + demo data
 - `npm run test` — Vitest
+- `npm run e2e` — Playwright (starts/reuses the dev server itself; needs Postgres + MinIO up first)
 - `npm run lint` / `npm run typecheck` / `npm run format:check`
+
+**Never run `npm run build` while a `next dev` process is also running against the same working copy** — both write to `.next/`, and a concurrent production build corrupts the dev server's routing state (every route starts 404ing until it's restarted). Stop the dev server first, build, then restart it if you still need it.
 
 ## Data access layer (Phase 1)
 
@@ -51,3 +54,11 @@ Next.js 15 (App Router) + TypeScript (strict) · PostgreSQL + Drizzle ORM · Tai
 - `src/server/vision/normalize.ts` maps `AnalysisResult` → `meal_items` row shape (fixed-point strings at the column scale, confidence clamped to `[0,1]`) — this is what Phase 5/6 should call before inserting, not ad-hoc rounding.
 - `src/server/vision/contract.ts`'s `runVisionServiceContractTests(label, factory)` must be run against any new provider implementation (openai/anthropic/google, when they land) in addition to that provider's own tests.
 - `MockVisionService` scenarios (`default | lowConfidence | singleItem | empty | timeout`) are the fixtures later phases should build their UI/tests against — see README "Vision service (mock)".
+
+## Capture, upload & storage (Phase 4)
+
+- `src/lib/image/process.ts` (`processImageFile`) validates (type + 20MB cap), downsamples to `MAX_EDGE_PX` (1920), and re-encodes to JPEG at `JPEG_QUALITY` (0.85) — client-side only, runs in the browser.
+- **Do not add manual EXIF-orientation correction back into this pipeline.** It used to exist (`getOrientedCanvasSize`/`applyOrientationTransform`, removed in Phase 4) and was verified — by hand-crafting a real EXIF-tagged JPEG and inspecting it in a real browser — to double-rotate portrait photos: `createImageBitmap` (with or without `imageOrientation: "none"`) and `<img>`/`naturalWidth`/`naturalHeight` all already return EXIF-corrected dimensions/pixels in current evergreen browsers, with no reliable way to opt out. `computeDownsampleDimensions` (`src/lib/image/resize.ts`) is the only "resize helper"; it just works off whatever width/height the browser reports, which is already orientation-correct.
+- `src/server/storage/` is the S3-compatible storage layer (`@aws-sdk/client-s3` + `s3-request-presigner`), MinIO locally (`docker-compose.yml`'s `minio`/`minio-init` services) via `S3_ENDPOINT` + `forcePathStyle`. `createPresignedUploadUrl(userId)` always derives the key from the **authenticated session's** user id (`users/{userId}/meals/{uuid}.jpg`) — never accept a client-supplied userId for this. Both upload and download presigned URLs expire in exactly `PRESIGNED_URL_EXPIRY_SECONDS` (15 min); the bucket itself is never made public.
+- `/capture` → upload → `/analyze?key=...` is the flow; `/analyze` is a placeholder until Phase 5. Both routes (plus `/dashboard`, `/profile`) are in `PROTECTED_PREFIXES` in `src/middleware.ts`.
+- `e2e/` holds the Playwright suite (`npm run e2e`) — real browser, real MinIO, no mocking. `e2e/fixtures/sample-meal.jpg` is a small checked-in JPEG; don't commit large fixtures.

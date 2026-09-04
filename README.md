@@ -66,13 +66,44 @@ const result = await vision.analyzeMealImage({ imageBuffer, mimeType });
   (`runVisionServiceContractTests`) that any implementation must pass; run
   against the mock in `mock-vision-service.test.ts`.
 
+## Testing capture & upload end to end
+
+1. Go to `/capture` (signed in). Click "Take photo" (opens the rear camera
+   directly on a phone) or "Upload photo" / drag-and-drop a file.
+2. A 12MP+ photo is downsampled client-side to ≤1920px on the longest edge
+   and re-encoded as JPEG — the preview appears immediately, well under the
+   original file size.
+3. "Retake" discards it and returns to the picker; "Use this photo" requests
+   a presigned upload URL (`users/{userId}/meals/{uuid}.jpg`, 15-minute
+   expiry) and PUTs the processed image directly to storage, with a
+   progress bar.
+4. On success you land on `/analyze?key=...` (a placeholder until Phase 5).
+5. Try a non-image file or one over 20MB — both are rejected inline with a
+   plain-language message, before any upload is attempted.
+
+Check the object landed and is private:
+
+```bash
+DOCKER_CONTEXT=colima docker compose exec minio \
+  mc alias set local http://localhost:9000 snapcalorie snapcalorie123
+DOCKER_CONTEXT=colima docker compose exec minio \
+  mc ls --recursive local/snapcalorie-meals
+```
+
+A plain (non-presigned) GET to that object's URL should fail — the bucket
+is private; only short-lived presigned URLs can read or write it.
+
+Run `npm run e2e` (Playwright, real browser + real MinIO, no mocking) for
+the automated version of this flow — it needs Postgres and MinIO up
+(`docker compose up -d`) and will start/reuse the dev server itself.
+
 ## Phase status
 
 - [x] Phase 0 — Scaffold, tooling & CI
 - [x] Phase 1 — Database schema & data layer
 - [x] Phase 2 — Auth, profile & calorie goal
 - [x] Phase 3 — Provider adapter + mock vision service
-- [ ] Phase 4 — Capture, upload & image pipeline
+- [x] Phase 4 — Capture, upload & image pipeline
 - [ ] Phase 5 — Detection, portion & macro engine
 - [ ] Phase 6 — Review & edit screen
 - [ ] Phase 7 — Daily dashboard & chronological log
