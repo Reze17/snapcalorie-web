@@ -43,7 +43,7 @@ async function getUserTimezone(
   const [user] = await executor
     .select({ timezone: users.timezone })
     .from(users)
-    .where(eq(users.userId, userId));
+    .where(eq(users.id, userId));
   if (!user) {
     throw new Error(`User ${userId} not found`);
   }

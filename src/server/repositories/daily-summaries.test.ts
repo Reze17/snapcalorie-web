@@ -19,11 +19,11 @@ describe("recalculateDailySummary", () => {
         dailyCalorieTarget: 2000,
       })
       .returning();
-    userId = user.userId;
+    userId = user.id;
   });
 
   afterAll(async () => {
-    await db.delete(users).where(eq(users.userId, userId));
+    await db.delete(users).where(eq(users.id, userId));
   });
 
   async function insertEntry(totalCalories: string, loggedAt: Date) {
@@ -88,7 +88,7 @@ describe("recalculateDailySummary", () => {
     await db
       .update(users)
       .set({ dailyCalorieTarget: 2500 })
-      .where(eq(users.userId, userId));
+      .where(eq(users.id, userId));
 
     await insertEntry("100.00", new Date("2026-01-05T21:00:00.000Z"));
     await recalculateDailySummary(db, userId, "2026-01-05");
@@ -106,7 +106,7 @@ describe("recalculateDailySummary", () => {
     await db
       .update(users)
       .set({ dailyCalorieTarget: 2000 })
-      .where(eq(users.userId, userId));
+      .where(eq(users.id, userId));
   });
 
   it("resolves timezone-correct day boundaries: 23:30 and 00:30 local land on different days", async () => {

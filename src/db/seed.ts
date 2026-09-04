@@ -49,7 +49,7 @@ async function seedDemoUser() {
 
     for (const meal of meals) {
       await createMealEntryWithItems({
-        userId: user.userId,
+        userId: user.id,
         imageStoragePath: `seed/${day.toISODate()}-${meal.hour}.jpg`,
         totalCalories: meal.calories.toFixed(2),
         totalProtein: meal.protein.toFixed(2),
@@ -71,7 +71,7 @@ async function seedDemoUser() {
     }
   }
 
-  console.log(`Seeded demo user ${user.email} (${user.userId})`);
+  console.log(`Seeded demo user ${user.email} (${user.id})`);
 }
 
 seedDemoUser()

@@ -6,6 +6,7 @@ import {
   integer,
   numeric,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -13,17 +14,69 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+// Note: the JS property is `id` (required by @auth/drizzle-adapter's
+// expected users-table shape) but the DB column stays `user_id`, per the
+// FRD §5 DDL.
 export const users = pgTable("users", {
-  userId: uuid("user_id")
+  id: uuid("user_id")
     .primaryKey()
     .default(sql`gen_random_uuid()`),
   email: varchar("email", { length: 255 }).notNull().unique(),
+  emailVerified: timestamp("email_verified", { withTimezone: true }),
+  name: varchar("name", { length: 255 }),
+  image: text("image"),
+  passwordHash: text("password_hash"),
   dailyCalorieTarget: integer("daily_calorie_target").notNull().default(2000),
   timezone: varchar("timezone", { length: 64 }).notNull().default("UTC"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
+
+// Auth.js (NextAuth v5) adapter tables. Session strategy is JWT (see
+// src/auth.ts for why), so `sessions` stays unused by credentials
+// sign-in, but OAuth account linking relies on `accounts`.
+export const accounts = pgTable(
+  "accounts",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: varchar("type", { length: 32 }).notNull(),
+    provider: varchar("provider", { length: 255 }).notNull(),
+    providerAccountId: varchar("provider_account_id", {
+      length: 255,
+    }).notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: varchar("token_type", { length: 255 }),
+    scope: varchar("scope", { length: 255 }),
+    id_token: text("id_token"),
+    session_state: varchar("session_state", { length: 255 }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.provider, table.providerAccountId] }),
+  ],
+);
+
+export const sessions = pgTable("sessions", {
+  sessionToken: varchar("session_token", { length: 255 }).primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expires: timestamp("expires", { withTimezone: true }).notNull(),
+});
+
+export const verificationTokens = pgTable(
+  "verification_tokens",
+  {
+    identifier: varchar("identifier", { length: 255 }).notNull(),
+    token: varchar("token", { length: 255 }).notNull(),
+    expires: timestamp("expires", { withTimezone: true }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.identifier, table.token] })],
+);
 
 export const mealEntries = pgTable(
   "meal_entries",
@@ -33,7 +86,7 @@ export const mealEntries = pgTable(
       .default(sql`gen_random_uuid()`),
     userId: uuid("user_id")
       .notNull()
-      .references(() => users.userId, { onDelete: "cascade" }),
+      .references(() => users.id, { onDelete: "cascade" }),
     imageStoragePath: text("image_storage_path").notNull(),
     totalCalories: numeric("total_calories", {
       precision: 7,
@@ -90,7 +143,7 @@ export const dailySummaries = pgTable(
       .default(sql`gen_random_uuid()`),
     userId: uuid("user_id")
       .notNull()
-      .references(() => users.userId, { onDelete: "cascade" }),
+      .references(() => users.id, { onDelete: "cascade" }),
     summaryDate: date("summary_date").notNull(),
     targetCalories: integer("target_calories").notNull(),
     consumedCalories: numeric("consumed_calories", {
