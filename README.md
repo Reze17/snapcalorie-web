@@ -155,6 +155,28 @@ whether you added them all manually):
 6. `npm run e2e` includes a Playwright test that drives this whole flow
    (edit → swap → add → save) and asserts the resulting DB rows directly.
 
+## Testing the dashboard & entry detail
+
+1. `/dashboard` is the post-login home. The "Today" card shows consumed,
+   target, remaining (negative when over target), and achievement % — the
+   progress bar can exceed 100% without breaking.
+2. Log a couple of meals, then open one from the timeline (tap the row) —
+   this is the entry detail/edit view. Change a portion, swap an item via
+   search, delete an item, or add one, then "Save changes" — the dashboard
+   reflects the new totals immediately on the way back.
+3. "Delete this meal" removes the whole entry and its items; the day's
+   totals correct immediately.
+4. Use "← Prev" / "Next →" to browse other days. "Next" is disabled (and
+   the date is clamped server-side even if you hand-edit the URL) once
+   you're on today, in your profile's timezone. A day with no entries shows
+   a plain, friendly empty state — not a nag.
+5. Push a day over target (e.g. lower your profile target, then log a
+   meal) — you'll see neutral copy like "320 kcal over target" in the same
+   style as an under-target day. No modal, no red, ever — this is FR-08,
+   and it's covered by a Playwright test
+   (`e2e/dashboard-non-punitive.spec.ts`) that asserts no dialog/danger
+   element appears.
+
 ## Phase status
 
 - [x] Phase 0 — Scaffold, tooling & CI
@@ -164,7 +186,7 @@ whether you added them all manually):
 - [x] Phase 4 — Capture, upload & image pipeline
 - [x] Phase 5 — Detection, portion & macro engine
 - [x] Phase 6 — Review & edit screen
-- [ ] Phase 7 — Daily dashboard & chronological log
+- [x] Phase 7 — Daily dashboard & chronological log
 - [ ] Phase 8 — Analytics, charts & streaks
 - [ ] Phase 9 — Export pipeline (CSV + PDF)
 - [ ] Phase 10 — NFR hardening & release metrics

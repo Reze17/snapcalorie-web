@@ -9,7 +9,13 @@ import type { NextRequest } from "next/server";
 //
 // Extend this list as more routes land under src/app/(app)/. The (app)
 // layout also checks auth server-side as a defense-in-depth backstop.
-const PROTECTED_PREFIXES = ["/dashboard", "/profile", "/capture", "/analyze"];
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/profile",
+  "/capture",
+  "/analyze",
+  "/entries",
+];
 
 export async function middleware(req: NextRequest) {
   // Local-only escape hatch for manual testing without signing in. Never
@@ -46,5 +52,6 @@ export const config = {
     "/profile/:path*",
     "/capture/:path*",
     "/analyze/:path*",
+    "/entries/:path*",
   ],
 };

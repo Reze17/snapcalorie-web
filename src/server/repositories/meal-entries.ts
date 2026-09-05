@@ -1,4 +1,5 @@
-import { and, desc, eq, gte, lt } from "drizzle-orm";
+import Decimal from "decimal.js";
+import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import { db } from "@/db/client";
 import { mealEntries, mealItems, users } from "@/db/schema";
 import type { DbOrTx } from "@/db/types";
@@ -105,6 +106,130 @@ export async function getEntriesForUserDay(userId: string, localDate: string) {
       ),
     )
     .orderBy(desc(mealEntries.loggedAt));
+}
+
+export interface MealEntryWithItems {
+  entry: typeof mealEntries.$inferSelect;
+  items: (typeof mealItems.$inferSelect)[];
+}
+
+/** Fetches a user's meal entries for one local calendar day, with their items, newest first. */
+export async function getEntriesWithItemsForUserDay(
+  userId: string,
+  localDate: string,
+): Promise<MealEntryWithItems[]> {
+  const entries = await getEntriesForUserDay(userId, localDate);
+  if (entries.length === 0) return [];
+
+  const entryIds = entries.map((entry) => entry.entryId);
+  const items = await db
+    .select()
+    .from(mealItems)
+    .where(inArray(mealItems.entryId, entryIds));
+
+  const itemsByEntryId = new Map<string, (typeof mealItems.$inferSelect)[]>();
+  for (const item of items) {
+    const list = itemsByEntryId.get(item.entryId) ?? [];
+    list.push(item);
+    itemsByEntryId.set(item.entryId, list);
+  }
+
+  return entries.map((entry) => ({
+    entry,
+    items: itemsByEntryId.get(entry.entryId) ?? [],
+  }));
+}
+
+/** Fetches one meal entry with its items, or null if it doesn't exist. */
+export async function getEntryWithItems(
+  entryId: string,
+): Promise<MealEntryWithItems | null> {
+  const [entry] = await db
+    .select()
+    .from(mealEntries)
+    .where(eq(mealEntries.entryId, entryId));
+  if (!entry) return null;
+
+  const items = await db
+    .select()
+    .from(mealItems)
+    .where(eq(mealItems.entryId, entryId));
+
+  return { entry, items };
+}
+
+/**
+ * Replaces an entry's items wholesale (used by the dashboard's edit view —
+ * grams/swap/delete/add all resolve to "here is the new item list"), then
+ * recomputes entry-level totals from those items and recalculates the
+ * day's summary. logged_at and image_storage_path are untouched, so the
+ * entry always stays on the same local day.
+ */
+export async function updateMealEntryWithItems(
+  entryId: string,
+  items: MealItemInput[],
+) {
+  return db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select()
+      .from(mealEntries)
+      .where(eq(mealEntries.entryId, entryId));
+    if (!existing) {
+      throw new Error(`Meal entry ${entryId} not found`);
+    }
+
+    await tx.delete(mealItems).where(eq(mealItems.entryId, entryId));
+
+    if (items.length > 0) {
+      await tx.insert(mealItems).values(
+        items.map((item) => ({
+          entryId,
+          foodName: item.foodName,
+          portionGrams: item.portionGrams,
+          calories: item.calories,
+          protein: item.protein,
+          carbs: item.carbs,
+          fat: item.fat,
+          aiConfidence: item.aiConfidence ?? null,
+          isUserEdited: item.isUserEdited ?? false,
+        })),
+      );
+    }
+
+    const totals = items.reduce(
+      (acc, item) => ({
+        calories: acc.calories.plus(item.calories),
+        protein: acc.protein.plus(item.protein),
+        carbs: acc.carbs.plus(item.carbs),
+        fat: acc.fat.plus(item.fat),
+      }),
+      {
+        calories: new Decimal(0),
+        protein: new Decimal(0),
+        carbs: new Decimal(0),
+        fat: new Decimal(0),
+      },
+    );
+    const roundTo2 = (value: Decimal) =>
+      value.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toFixed(2);
+
+    const [updated] = await tx
+      .update(mealEntries)
+      .set({
+        totalCalories: roundTo2(totals.calories),
+        totalProtein: roundTo2(totals.protein),
+        totalCarbs: roundTo2(totals.carbs),
+        totalFat: roundTo2(totals.fat),
+      })
+      .where(eq(mealEntries.entryId, entryId))
+      .returning();
+
+    const timezone = await getUserTimezone(tx, updated.userId);
+    const localDate = instantToLocalDate(updated.loggedAt, timezone);
+    await recalculateDailySummary(tx, updated.userId, localDate);
+
+    return updated;
+  });
 }
 
 /** Updates a meal entry and recalculates the summary for its old and (if changed) new day. */

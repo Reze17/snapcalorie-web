@@ -82,6 +82,19 @@ export async function recalculateDailySummary(
     });
 }
 
+export async function getDailySummary(userId: string, localDate: string) {
+  const [summary] = await db
+    .select()
+    .from(dailySummaries)
+    .where(
+      and(
+        eq(dailySummaries.userId, userId),
+        eq(dailySummaries.summaryDate, localDate),
+      ),
+    );
+  return summary;
+}
+
 export async function getDailySummaries(
   userId: string,
   fromDate: string,
