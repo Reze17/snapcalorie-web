@@ -1,3 +1,4 @@
+import { AnthropicVisionService } from "./anthropic-vision-service";
 import { VisionServiceNotImplementedError } from "./errors";
 import { MockVisionService } from "./mock-vision-service";
 import type { INutritionVisionService } from "./types";
@@ -32,8 +33,9 @@ export function getVisionService(): INutritionVisionService {
   switch (provider) {
     case "mock":
       return new MockVisionService();
-    case "openai":
     case "anthropic":
+      return new AnthropicVisionService();
+    case "openai":
     case "google":
       throw new VisionServiceNotImplementedError(provider);
   }

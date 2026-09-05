@@ -28,7 +28,10 @@ function clampConfidence(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
 
-export function normalizeDetectedFood(item: DetectedFood): NormalizedMealItem {
+export function normalizeDetectedFood(
+  item: DetectedFood,
+  isUserEdited = false,
+): NormalizedMealItem {
   return {
     foodName: item.foodName,
     portionGrams: round(item.portionGrams),
@@ -37,12 +40,12 @@ export function normalizeDetectedFood(item: DetectedFood): NormalizedMealItem {
     carbs: round(item.carbs),
     fat: round(item.fat),
     aiConfidence: round(clampConfidence(item.confidence)),
-    isUserEdited: false,
+    isUserEdited,
   };
 }
 
 export function normalizeAnalysisResult(
   result: AnalysisResult,
 ): NormalizedMealItem[] {
-  return result.items.map(normalizeDetectedFood);
+  return result.items.map((item) => normalizeDetectedFood(item));
 }

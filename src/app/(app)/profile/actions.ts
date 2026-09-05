@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { auth } from "@/auth";
 import { updateUserProfile } from "@/server/repositories/users";
+import { getEffectiveUser } from "@/server/dev-bypass";
 import { profileSchema } from "@/server/validation/profile";
 
 export interface ProfileState {
@@ -14,8 +14,8 @@ export async function updateProfileAction(
   _prevState: ProfileState,
   formData: FormData,
 ): Promise<ProfileState> {
-  const session = await auth();
-  if (!session?.user) {
+  const user = await getEffectiveUser();
+  if (!user) {
     return { error: "You must be signed in" };
   }
 
@@ -28,7 +28,7 @@ export async function updateProfileAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
-  await updateUserProfile(session.user.id, parsed.data);
+  await updateUserProfile(user.id, parsed.data);
   revalidatePath("/profile");
   return { success: true };
 }

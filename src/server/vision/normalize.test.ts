@@ -46,8 +46,12 @@ describe("normalizeDetectedFood", () => {
     );
   });
 
-  it("always sets isUserEdited to false for a fresh AI detection", () => {
+  it("defaults isUserEdited to false for a fresh AI detection", () => {
     expect(normalizeDetectedFood(sample).isUserEdited).toBe(false);
+  });
+
+  it("sets isUserEdited to true when the caller marks the item as edited", () => {
+    expect(normalizeDetectedFood(sample, true).isUserEdited).toBe(true);
   });
 });
 

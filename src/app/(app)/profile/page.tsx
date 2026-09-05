@@ -1,15 +1,15 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
 import { getUserById } from "@/server/repositories/users";
+import { getEffectiveUser } from "@/server/dev-bypass";
 import { ProfileForm } from "./ProfileForm";
 
 export default async function ProfilePage() {
-  const session = await auth();
-  if (!session?.user) {
+  const effectiveUser = await getEffectiveUser();
+  if (!effectiveUser) {
     redirect("/login");
   }
 
-  const user = await getUserById(session.user.id);
+  const user = await getUserById(effectiveUser.id);
   if (!user) {
     redirect("/login");
   }

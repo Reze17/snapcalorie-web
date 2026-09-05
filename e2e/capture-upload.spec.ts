@@ -29,5 +29,9 @@ test("uploads a photo end to end against local object storage", async ({
 
   const key = new URL(page.url()).searchParams.get("key");
   expect(key).toMatch(/^users\/[0-9a-f-]+\/meals\/[0-9a-f-]+\.jpg$/);
-  await expect(page.getByText(key!)).toBeVisible();
+
+  // The mock vision provider's deterministic 3-item plate, plus the sticky
+  // totals/save bar, confirms analysis rendered on the review screen.
+  await expect(page.getByText("Grilled chicken breast")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save meal" })).toBeVisible();
 });

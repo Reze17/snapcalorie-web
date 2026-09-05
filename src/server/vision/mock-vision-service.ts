@@ -1,4 +1,5 @@
 import { VisionServiceTimeoutError } from "./errors";
+import { round2 } from "./round";
 import type {
   AnalysisResult,
   AnalyzeMealImageInput,
@@ -41,10 +42,6 @@ const BROCCOLI_PER_100G: MacroProfile = {
   carbs: 7.2,
   fat: 0.4,
 };
-
-function round2(value: number): number {
-  return Math.round(value * 100) / 100;
-}
 
 function scale(
   per100g: MacroProfile,

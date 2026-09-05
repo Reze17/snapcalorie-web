@@ -12,6 +12,12 @@ import type { NextRequest } from "next/server";
 const PROTECTED_PREFIXES = ["/dashboard", "/profile", "/capture", "/analyze"];
 
 export async function middleware(req: NextRequest) {
+  // Local-only escape hatch for manual testing without signing in. Never
+  // set this outside a local .env — see CLAUDE.md.
+  if (process.env.DEV_BYPASS_AUTH === "true") {
+    return NextResponse.next();
+  }
+
   const isProtected = PROTECTED_PREFIXES.some((prefix) =>
     req.nextUrl.pathname.startsWith(prefix),
   );

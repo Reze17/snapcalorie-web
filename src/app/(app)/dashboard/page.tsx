@@ -1,15 +1,15 @@
 import Link from "next/link";
-import { auth } from "@/auth";
+import { getEffectiveUser } from "@/server/dev-bypass";
 
 export default async function DashboardPage() {
-  const session = await auth();
+  const user = await getEffectiveUser();
 
   return (
     <main className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">Dashboard</h1>
       <p className="text-sm text-[var(--foreground)]/70">
-        Signed in as {session?.user?.email}. The daily log and progress view
-        land in Phase 7.
+        Signed in as {user?.email}. The daily log and progress view land in
+        Phase 7.
       </p>
       <Link
         href="/capture"
