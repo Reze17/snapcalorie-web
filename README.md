@@ -177,6 +177,33 @@ whether you added them all manually):
    (`e2e/dashboard-non-punitive.spec.ts`) that asserts no dialog/danger
    element appears.
 
+## Testing insights & streaks
+
+1. Go to `/insights` (signed in). With no meals logged yet, everything reads
+   as a clean zero state — "0 days" streaks, "—" for average intake, and
+   empty charts with continuous (not missing) day positions — with neutral
+   copy, never a warning.
+2. Log a meal today, then check back tomorrow (or shift your system/profile
+   timezone-relative testing) after logging again the next day — the
+   current streak should read 2, not 1, and should not have appeared broken
+   while today hadn't been logged yet.
+3. Skip a day, then log again — the streak resets to 1, while "Best streak"
+   keeps the longest run you've had so far (it never decreases).
+4. Change your profile's calorie target (`/profile`), then log a meal and
+   check `/insights`: only *today's* bar/target-line point reflects the new
+   target. Any earlier day you already logged keeps showing the target that
+   was in effect when it was recorded — historical targets never move.
+5. Toggle "7d" / "30d" above the chart. Days with no entries render as a
+   zero-height bar at their correct x-axis position (never omitted), and
+   the dashed target line stays continuous even through those gaps.
+6. Resize the window down to ~360px — axis labels (dates and calorie
+   values) should stay fully readable, not clipped or overlapping.
+7. `npx vitest run src/lib/streak.test.ts src/lib/insights.test.ts` covers
+   the streak calculator (empty history, single day, consecutive runs,
+   one-day gaps, a month-boundary crossing, and a non-UTC timezone near
+   midnight) and the chart gap-filling/stats logic directly, without
+   needing the UI.
+
 ## Phase status
 
 - [x] Phase 0 — Scaffold, tooling & CI
@@ -187,6 +214,6 @@ whether you added them all manually):
 - [x] Phase 5 — Detection, portion & macro engine
 - [x] Phase 6 — Review & edit screen
 - [x] Phase 7 — Daily dashboard & chronological log
-- [ ] Phase 8 — Analytics, charts & streaks
+- [x] Phase 8 — Analytics, charts & streaks
 - [ ] Phase 9 — Export pipeline (CSV + PDF)
 - [ ] Phase 10 — NFR hardening & release metrics

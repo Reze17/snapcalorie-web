@@ -1,5 +1,5 @@
 import Decimal from "decimal.js";
-import { and, desc, eq, gt, gte, lte, lt } from "drizzle-orm";
+import { and, eq, gt, gte, lte, lt } from "drizzle-orm";
 import { db } from "@/db/client";
 import { dailySummaries, mealEntries, users } from "@/db/schema";
 import type { DbOrTx } from "@/db/types";
@@ -138,4 +138,21 @@ export async function getDailySummaries(
       ),
     )
     .orderBy(dailySummaries.summaryDate);
+}
+
+/**
+ * Every local date this user has ever logged >=1 entry for, per the
+ * persisted streak_count column (FR-09) — streak_count > 0 exactly when
+ * that day had an entry, so this doubles as the "logged dates" set that
+ * src/lib/streak.ts's pure functions need, without scanning meal_entries.
+ * Served by the existing (user_id, summary_date) unique index; no new
+ * index needed.
+ */
+export async function getStreakHistory(userId: string): Promise<string[]> {
+  const rows = await db
+    .select({ summaryDate: dailySummaries.summaryDate })
+    .from(dailySummaries)
+    .where(and(eq(dailySummaries.userId, userId), gt(dailySummaries.streakCount, 0)))
+    .orderBy(dailySummaries.summaryDate);
+  return rows.map((row) => row.summaryDate);
 }
