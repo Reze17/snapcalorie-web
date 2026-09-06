@@ -82,6 +82,11 @@ export function CaptureFlow() {
     setStatus("uploading");
     setErrorMessage(null);
     setProgress(0);
+    // Warm the /analyze route's JS chunk while the upload is in flight —
+    // we don't know the ?key= yet, but the route bundle itself is static,
+    // so this shaves chunk-download time off the critical path on a slow
+    // connection instead of only starting once the upload finishes.
+    router.prefetch("/analyze");
     try {
       const { key, uploadUrl } = await requestUploadUrl();
       await uploadWithProgress(uploadUrl, photo.blob, setProgress);

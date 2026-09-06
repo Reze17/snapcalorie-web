@@ -1,5 +1,6 @@
 import Anthropic, { APIConnectionTimeoutError } from "@anthropic-ai/sdk";
 import type { z } from "zod";
+import { logEvent } from "@/server/lib/log";
 import { VisionAnalysisFailedError, VisionServiceTimeoutError } from "./errors";
 import { round2 } from "./round";
 import {
@@ -180,9 +181,7 @@ function toDetectedFood(raw: RawDetectedFood): DetectedFood {
 }
 
 function logAnalysisEvent(fields: Record<string, unknown>): void {
-  // Structured (single-line JSON) so Phase 10 can grep/parse processingMs
-  // against the 4s end-to-end latency budget.
-  console.info(JSON.stringify({ event: "vision_analysis", ...fields }));
+  logEvent("vision_analysis", fields);
 }
 
 /**

@@ -5,7 +5,15 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { db } from "@/db/client";
 import { accounts, sessions, users, verificationTokens } from "@/db/schema";
+import { checkRateLimit } from "@/server/lib/rate-limit";
 import { getUserByEmail } from "@/server/repositories/users";
+
+// FRD §6: rate-limit auth endpoints. Keyed by email (not IP) — the goal is
+// to slow down brute-forcing one account, which a per-IP limit alone
+// wouldn't stop from a botnet, and this stays correct behind any proxy
+// setup without needing to trust forwarded-for headers.
+const LOGIN_RATE_LIMIT = 10;
+const LOGIN_RATE_WINDOW_SECONDS = 60 * 60;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -46,6 +54,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             ? credentials.password
             : undefined;
         if (!email || !password) return null;
+
+        const rateLimit = await checkRateLimit(
+          `login:${email.toLowerCase()}`,
+          LOGIN_RATE_LIMIT,
+          LOGIN_RATE_WINDOW_SECONDS,
+        );
+        if (!rateLimit.allowed) return null;
 
         const user = await getUserByEmail(email);
         if (!user?.passwordHash) return null;

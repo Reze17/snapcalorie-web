@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getEffectiveUser } from "@/server/dev-bypass";
+import { logEvent } from "@/server/lib/log";
 import {
   deleteMealEntry,
   getEntryWithItems,
@@ -9,6 +10,17 @@ import {
 } from "@/server/repositories/meal-entries";
 import { normalizeDetectedFood } from "@/server/vision/normalize";
 import type { DetectedFood } from "@/server/vision/types";
+
+// Server-side error messages can carry internal ids (see
+// src/server/repositories/meal-entries.ts's "Meal entry {id} not found"
+// etc.) — never forward err.message to the client (FRD §6 privacy pass).
+// Log the real error server-side and return a generic one instead.
+function toClientError(err: unknown, fallback: string, event: string): string {
+  logEvent(event, {
+    cause: err instanceof Error ? err.message : String(err),
+  });
+  return fallback;
+}
 
 async function assertOwnedEntry(entryId: string, userId: string) {
   const entryWithItems = await getEntryWithItems(entryId);
@@ -57,7 +69,11 @@ export async function updateEntryAction(
   } catch (err) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Failed to save changes.",
+      error: toClientError(
+        err,
+        "Failed to save changes.",
+        "update_entry_failed",
+      ),
     };
   }
 }
@@ -84,7 +100,11 @@ export async function deleteEntryAction(
   } catch (err) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Failed to delete this meal.",
+      error: toClientError(
+        err,
+        "Failed to delete this meal.",
+        "delete_entry_failed",
+      ),
     };
   }
 }

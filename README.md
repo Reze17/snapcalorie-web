@@ -2,6 +2,46 @@
 
 An AI meal-photo calorie tracker. See [CLAUDE.md](./CLAUDE.md) for the project's non-negotiable rules.
 
+## Architecture overview
+
+Next.js 15 (App Router, TypeScript strict) as one deployable unit — Server
+Components/Actions for almost everything, a handful of Route Handlers under
+`src/app/api/` for things a browser needs to `fetch`/download directly
+(export files, auth callbacks, health checks).
+
+```
+Browser
+  │  Server Components + Server Actions (no separate API layer for app pages)
+  ▼
+Next.js app (src/app/)
+  │
+  ├─ src/server/repositories/   one file per aggregate (users, meal-entries,
+  │                             daily-summaries, export, export-jobs, metrics) —
+  │                             the only code that talks to Postgres via Drizzle
+  ├─ src/server/vision/         INutritionVisionService interface + mock/Anthropic
+  │                             implementations, selected by VISION_PROVIDER
+  ├─ src/server/storage/        S3-compatible object storage (presigned URLs only,
+  │                             bucket always private)
+  ├─ src/server/export/         CSV/PDF generation + the async job runner for
+  │                             large date ranges
+  ├─ src/server/lib/            timezone math, structured logging, rate limiting —
+  │                             each the ONE place that concern lives
+  └─ src/lib/                   pure, DB-free business logic (portion scaling,
+                                 streak calculation, daily metrics, percentile,
+                                 accuracy scoring) — reused by both server code
+                                 and, where relevant, the client
+  ▼
+Postgres (Drizzle ORM)          S3-compatible storage (MinIO locally)
+```
+
+Auth is Auth.js v5 (JWT sessions — see `src/auth.ts` for why "database
+sessions" isn't actually available for the credentials provider);
+`src/middleware.ts` gates protected routes and also sets security headers
+(CSP with a per-request nonce) on every response. There is no separate
+background-job infrastructure (no Redis/queue) — the one place that matters
+(large export generation) uses a detached async function instead, since this
+runs as a single long-lived Node process rather than serverless functions.
+
 ## Getting started
 
 ```bash
@@ -18,6 +58,29 @@ Open [http://localhost:3000](http://localhost:3000) to see the result.
 > Using Colima instead of Docker Desktop? Run `colima start` first, and prefix
 > `docker`/`docker compose` commands with `DOCKER_CONTEXT=colima` if your
 > machine has more than one Colima profile.
+
+## Environment variables
+
+Every var below (see `.env.example`) is documented there too. Nothing here
+is required just to run the app locally — the defaults (mock vision
+provider, MinIO, no Sentry, no admin allowlist) all work with zero setup.
+
+| Variable                                                                | Required                   | Default                              | Purpose                                                                                                                             |
+| ----------------------------------------------------------------------- | -------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                          | yes                        | —                                    | Postgres connection string                                                                                                          |
+| `AUTH_SECRET`                                                           | yes                        | —                                    | Auth.js JWT signing secret (`npx auth secret`)                                                                                      |
+| `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`                                 | no                         | unset                                | Real Google OAuth (email/password works without these)                                                                              |
+| `AUTH_TRUST_HOST`                                                       | prod only, if not on HTTPS | unset                                | Auth.js's Host-header check requires this when serving a production build over plain HTTP (no reverse proxy setting a trusted host) |
+| `DEV_BYPASS_AUTH`                                                       | no                         | `false`                              | **Local only** — skips login everywhere, auto-provisions a fixed dev user. Never set `true` outside a local `.env`                  |
+| `VISION_PROVIDER`                                                       | no                         | `mock`                               | `mock` \| `anthropic` (`openai`/`google` accepted, not implemented)                                                                 |
+| `VISION_API_KEY`                                                        | only if `anthropic`        | falls back to `ANTHROPIC_API_KEY`    | Claude API key                                                                                                                      |
+| `VISION_ANTHROPIC_MODEL`                                                | no                         | `claude-sonnet-5`                    | Model override                                                                                                                      |
+| `VISION_MOCK_SCENARIO` / `VISION_MOCK_LATENCY_MS`                       | no                         | unset                                | Force a mock scenario/latency for manual QA                                                                                         |
+| `NUTRITION_PROVIDER` / `NUTRITION_API_KEY`                              | no                         | `mock`                               | Reserved — the vision model returns macros directly today, see CLAUDE.md                                                            |
+| `S3_BUCKET` / `S3_REGION` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | yes                        | matches `docker-compose.yml`'s MinIO | Object storage credentials                                                                                                          |
+| `S3_ENDPOINT`                                                           | no                         | unset (real AWS S3)                  | Set to point at MinIO or another S3-compatible endpoint                                                                             |
+| `ADMIN_EMAILS`                                                          | no                         | unset (nobody can reach it)          | Comma-separated allowlist for `/admin/metrics`                                                                                      |
+| `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN`                                 | no                         | unset (no-op)                        | Error tracking — no Sentry account needed for the app to build/run                                                                  |
 
 ## Testing auth end to end
 
@@ -47,6 +110,14 @@ user is auto-provisioned, and a banner reminds you it's on. Set it back to
 `false` (or delete the line) to test real login again.
 
 ## Vision service
+
+**Swapping providers is one env var, no code changes**: set
+`VISION_PROVIDER=mock` or `anthropic` in `.env` and restart. Adding a new
+real provider means implementing `INutritionVisionService` (`src/server/vision/types.ts`),
+adding a `case` in `src/server/vision/factory.ts`'s `getVisionService()`, and
+running it through `runVisionServiceContractTests` (`src/server/vision/contract.ts`) —
+every call site (`/analyze`, the accuracy harness, etc.) depends only on the
+interface and needs no changes at all.
 
 `src/server/vision/` holds the `INutritionVisionService` interface and two
 implementations, selected by `VISION_PROVIDER` with zero call-site changes:
@@ -243,6 +314,93 @@ whether you added them all manually):
    downloads a real CSV and PDF through a real browser and asserts their
    content.
 
+## Running the test suites
+
+| Command                 | What it runs                                                                                                                                        |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`     | `tsc --noEmit`                                                                                                                                      |
+| `npm run lint`          | ESLint                                                                                                                                              |
+| `npm run format:check`  | Prettier (`npm run format` to auto-fix)                                                                                                             |
+| `npm run test`          | Vitest — unit + repository tests against the real local Postgres, no mocking                                                                        |
+| `npm run e2e`           | Playwright — real browser, real MinIO, no mocking (needs `docker compose up -d` first)                                                              |
+| `npm run test:perf`     | The 4G-throttled capture→analyze latency check, against a **production build** (`playwright.perf.config.ts` runs `next build && next start` itself) |
+| `npm run test:accuracy` | The vision-provider accuracy harness (`scripts/run-accuracy-harness.ts`) against `fixtures/accuracy/cases.json`                                     |
+| `npm run build`         | Production build. **Never run this while `npm run dev` is also running** — see CLAUDE.md                                                            |
+
+## Testing NFR hardening & ops (Phase 10)
+
+**Security headers & CSP**: every response carries a nonce-based
+Content-Security-Policy (`src/middleware.ts`) plus `X-Content-Type-Options`,
+`Referrer-Policy`, and `Permissions-Policy` (`next.config.ts`); `curl -sI
+http://localhost:3000/dashboard` to see them. Browse the app and check the
+console for CSP violations if you change any script/style-loading code.
+
+**Rate limiting**: the analysis endpoint (30/analyze per user/hour),
+credentials login (10 attempts/email/hour), and signup (200/IP/hour — see
+`src/app/signup/actions.ts` for why that number, not something tighter) are
+all backed by the `rate_limit_counters` table
+(`src/server/lib/rate-limit.ts`). Hit a limit by looping a request past it;
+the response is a plain, generic rejection — never a distinct "you're rate
+limited" signal that would help an attacker distinguish it from "wrong
+password."
+
+**Storage privacy**: `npx vitest run src/server/storage/presign.test.ts`
+proves — against real MinIO, not just by reading the 900-second constant —
+that a plain GET to an object is rejected (private bucket) and that a
+presigned URL actually stops working once its expiry lapses.
+
+**`/admin/metrics`**: set `ADMIN_EMAILS` in `.env` to your own email (or the
+dev-bypass one), then visit `/admin/metrics` — p50/p75/p95 latency per
+pipeline stage (last 24h), the FR-10 "% of meals saved with zero manual
+edits" metric (target >75%), and a current-streak-length histogram across
+all users. Anyone not on the allowlist gets a 404, not a login redirect.
+
+**`/api/health`**: `curl http://localhost:3000/api/health` — `{"status":"ok","checks":{"db":true,"storage":true}}`
+when both Postgres and MinIO/S3 are reachable, `503` with generic checks
+(never a raw connection error) otherwise. No auth — standard for infra
+health probes.
+
+**Responsive audit**: `npx playwright test e2e/responsive.spec.ts` checks
+`/dashboard`, `/insights`, and `/export` at 360/768/1440/3840px for
+horizontal scroll. 3840px (4K) deliberately does **not** stretch to fill the
+screen — the mobile-first layout stays centered with more whitespace, which
+is correct, not a bug.
+
+**Accuracy harness**: `npm run test:accuracy` runs a small labeled fixture
+set through `getVisionService()` and reports top-3 identification accuracy
+(FR-05 target ≥85%). Against the mock provider (the default) this proves
+the harness's scoring logic works — it deliberately includes both a
+matching and a wrong-label case so the number isn't vacuous — but is **not**
+a real accuracy measurement, since the mock always returns the same fixed
+output regardless of the photo. To measure real accuracy: set
+`VISION_PROVIDER=anthropic` + `VISION_API_KEY`, then replace
+`fixtures/accuracy/cases.json` with real, varied labeled meal photos.
+
+**Error tracking**: set `SENTRY_DSN` (server/edge) and/or
+`NEXT_PUBLIC_SENTRY_DSN` (client) to enable `@sentry/nextjs` — both are
+no-ops without a DSN, so no account is needed for local development. A
+`beforeSend` hook strips any `?key=` query param from reported request URLs
+before an event would ever leave the process, so a storage key/photo
+reference is never exposed in an error report.
+
+## Deployment
+
+`Dockerfile` is a multi-stage build using Next's `output: "standalone"`
+(next.config.ts) — the runtime image only carries the pruned dependencies
+Next actually needs. This is portable config verified to build and run
+correctly (tested locally: built the image, ran it against the real
+docker-compose Postgres/MinIO, confirmed `/api/health` and `/dashboard`
+both work end to end) — it is **not** a verified live deployment, since no
+specific cloud target has been provisioned for this project. Point it at
+your own Postgres and S3-compatible storage using the env vars in
+"Environment variables" above; `AUTH_TRUST_HOST=true` is required unless
+you're serving over real HTTPS with a trusted host already configured.
+
+```bash
+docker build -t snapcalorie-web .
+docker run -p 3000:3000 --env-file .env.production snapcalorie-web
+```
+
 ## Phase status
 
 - [x] Phase 0 — Scaffold, tooling & CI
@@ -255,4 +413,4 @@ whether you added them all manually):
 - [x] Phase 7 — Daily dashboard & chronological log
 - [x] Phase 8 — Analytics, charts & streaks
 - [x] Phase 9 — Export pipeline (CSV + PDF)
-- [ ] Phase 10 — NFR hardening & release metrics
+- [x] Phase 10 — NFR hardening & release metrics

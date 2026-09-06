@@ -1,5 +1,6 @@
 import { DateTime } from "luxon";
 import { getEarliestEntryLocalDate } from "@/server/repositories/export";
+import { exportDateParamSchema } from "@/server/validation/export";
 
 // Ranges longer than this go through the async job pipeline instead of
 // blocking the request (FR-10 item 5). 90 days keeps the common "last
@@ -18,8 +19,14 @@ function clampDateParam(
   fallback: string,
   max: string,
 ): string {
-  if (!param) return fallback;
-  const parsed = DateTime.fromISO(param);
+  // Reject anything that doesn't even look like a date outright — the
+  // zod check here is defense-in-depth against a garbage/oversized query
+  // value, on top of the lenient fallback-to-default behavior below for
+  // an otherwise well-formed but out-of-range date.
+  const validShape = exportDateParamSchema.safeParse(param);
+  if (!validShape.success || !validShape.data) return fallback;
+
+  const parsed = DateTime.fromISO(validShape.data);
   const iso = parsed.isValid ? parsed.toISODate() : null;
   if (!iso) return fallback;
   return iso > max ? max : iso;

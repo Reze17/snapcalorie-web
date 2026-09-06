@@ -6,6 +6,7 @@ import {
   exportRowToCsvFields,
 } from "@/lib/export";
 import { generateExportPdf } from "@/server/export/pdf";
+import { logEvent } from "@/server/lib/log";
 import { getExportData } from "@/server/repositories/export";
 import {
   getOwnedExportJob,
@@ -87,9 +88,16 @@ export async function runExportJob(
       completedAt: new Date(),
     });
   } catch (err) {
+    // The status endpoint echoes errorMessage straight to the client, so
+    // the stored message must stay generic — the real cause (which can
+    // include internal paths/ids) goes to the server log only.
+    logEvent("export_job_failed", {
+      jobId,
+      cause: err instanceof Error ? err.message : String(err),
+    });
     await updateExportJobStatus(jobId, {
       status: "failed",
-      errorMessage: err instanceof Error ? err.message : String(err),
+      errorMessage: "Something went wrong generating this export.",
     });
   }
 }

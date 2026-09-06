@@ -166,6 +166,44 @@ export const exportJobs = pgTable(
   ],
 );
 
+// Phase 10 (FRD §6 latency NFR): one row per timed stage of the
+// capture->analyze->save pipeline. entryId is nullable since some stages
+// (e.g. vision_inference) happen before a meal_entries row exists yet.
+export const latencyEvents = pgTable(
+  "latency_events",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    event: varchar("event", { length: 32 }).notNull(),
+    durationMs: integer("duration_ms").notNull(),
+    entryId: uuid("entry_id"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("latency_events_event_created_idx").on(
+      table.event,
+      table.createdAt.desc(),
+    ),
+  ],
+);
+
+// Phase 10 (FRD §6 security NFR): fixed-window rate limiting, Postgres-backed
+// since this stack has no Redis. `key` is caller-defined (e.g.
+// "analysis:{userId}", "login:{email}:{ip}") and `windowStart` is the start
+// of the current fixed window for that key — see src/server/lib/rate-limit.ts.
+export const rateLimitCounters = pgTable(
+  "rate_limit_counters",
+  {
+    key: varchar("key", { length: 255 }).notNull(),
+    windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+    count: integer("count").notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.key, table.windowStart] })],
+);
+
 export const dailySummaries = pgTable(
   "daily_summaries",
   {

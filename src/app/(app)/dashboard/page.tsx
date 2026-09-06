@@ -87,7 +87,7 @@ export default async function DashboardPage({
           {formatDateHeading(viewDate, isToday)}
         </span>
         {isToday ? (
-          <span className="flex h-11 items-center rounded border border-white/10 px-3 text-sm text-[var(--foreground)]/30">
+          <span className="flex h-11 items-center rounded border border-white/10 px-3 text-sm text-[var(--foreground)]/50">
             Next →
           </span>
         ) : (

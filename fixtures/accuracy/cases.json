@@ -1,0 +1,14 @@
+[
+  {
+    "id": "sample-meal-correct-labels",
+    "imagePath": "e2e/fixtures/sample-meal.jpg",
+    "expectedFoods": ["Grilled chicken breast", "White rice", "Broccoli"],
+    "note": "Matches the mock provider's fixed 3-item output exactly — proves the harness correctly scores a hit."
+  },
+  {
+    "id": "sample-meal-wrong-labels",
+    "imagePath": "e2e/fixtures/sample-meal.jpg",
+    "expectedFoods": ["Sushi roll", "Miso soup"],
+    "note": "Deliberately wrong labels for the same photo — proves the harness correctly scores a miss (not vacuous 100%)."
+  }
+]
