@@ -190,7 +190,7 @@ whether you added them all manually):
 3. Skip a day, then log again — the streak resets to 1, while "Best streak"
    keeps the longest run you've had so far (it never decreases).
 4. Change your profile's calorie target (`/profile`), then log a meal and
-   check `/insights`: only *today's* bar/target-line point reflects the new
+   check `/insights`: only _today's_ bar/target-line point reflects the new
    target. Any earlier day you already logged keeps showing the target that
    was in effect when it was recorded — historical targets never move.
 5. Toggle "7d" / "30d" above the chart. Days with no entries render as a
@@ -204,6 +204,45 @@ whether you added them all manually):
    midnight) and the chart gap-filling/stats logic directly, without
    needing the UI.
 
+## Testing the export pipeline
+
+1. Go to `/export` (signed in). The "From" field defaults to blank ("all
+   time" — your very first entry's date); "To" defaults to today. Both are
+   clamped server-side to never exceed today, even if you hand-edit the URL.
+2. Pick a short range (or leave the defaults, for a small seeded history)
+   and click **Download CSV** — this is a plain form submission, not a
+   fetch/JS download, so it works identically on desktop and mobile
+   Safari/Chrome: the browser downloads the file natively off
+   `Content-Disposition: attachment` without navigating away from `/export`.
+3. Open the CSV in Excel or Google Sheets — accented characters render
+   correctly (UTF-8 BOM), and a food name with a comma or quote in it stays
+   in one cell (RFC 4180 quoting). Every number in the `daily_*` columns
+   matches what `/dashboard` showed for that day.
+4. Click **Download PDF** — a cover block (account, date range, generated
+   timestamp), then one section per day (target/consumed/variance/
+   achievement %, plus a meals table with a per-meal local time — not UTC).
+   Every page has a footer ("Page X of Y") and repeats the table header
+   after a page break.
+5. Pick a range over 90 days (or leave "From" blank on an account with a
+   long history) — instead of a file, you're redirected to a progress state
+   on the same page ("Preparing your export…") that polls until the file is
+   ready, then shows a **Download** link. You can navigate away and come
+   back to the same `/export?pending=<jobId>` URL later.
+6. Cross-user protection: `getOwnedExportJob(jobId, userId)` is the only way
+   any route reads a job, scoped to `(jobId, userId)` in one query — a
+   mismatched pair returns nothing, identical to a nonexistent job. Proven
+   in `src/server/repositories/export-jobs.test.ts` (two real users) and
+   `e2e/export.spec.ts`'s second test (two separate authenticated browser
+   contexts — the "attacker" gets a 404 from both the status and download
+   routes for the "owner"'s real job).
+7. `npx vitest run src/lib/export.test.ts src/server/export` covers RFC 4180
+   escaping, CSV row/day-context building, and the PDF generator (including
+   regression tests for a timezone-formatting bug and a pdfkit page-count
+   bug, both found only by rendering real output during manual testing —
+   see CLAUDE.md). `npm run e2e` includes `e2e/export.spec.ts`, which
+   downloads a real CSV and PDF through a real browser and asserts their
+   content.
+
 ## Phase status
 
 - [x] Phase 0 — Scaffold, tooling & CI
@@ -215,5 +254,5 @@ whether you added them all manually):
 - [x] Phase 6 — Review & edit screen
 - [x] Phase 7 — Daily dashboard & chronological log
 - [x] Phase 8 — Analytics, charts & streaks
-- [ ] Phase 9 — Export pipeline (CSV + PDF)
+- [x] Phase 9 — Export pipeline (CSV + PDF)
 - [ ] Phase 10 — NFR hardening & release metrics

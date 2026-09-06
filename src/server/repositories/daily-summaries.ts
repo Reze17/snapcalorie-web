@@ -152,7 +152,9 @@ export async function getStreakHistory(userId: string): Promise<string[]> {
   const rows = await db
     .select({ summaryDate: dailySummaries.summaryDate })
     .from(dailySummaries)
-    .where(and(eq(dailySummaries.userId, userId), gt(dailySummaries.streakCount, 0)))
+    .where(
+      and(eq(dailySummaries.userId, userId), gt(dailySummaries.streakCount, 0)),
+    )
     .orderBy(dailySummaries.summaryDate);
   return rows.map((row) => row.summaryDate);
 }

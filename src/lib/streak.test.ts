@@ -8,9 +8,7 @@ describe("computeCurrentStreak", () => {
   });
 
   it("returns 1 for a single day logged today", () => {
-    expect(computeCurrentStreak(new Set(["2026-03-10"]), "2026-03-10")).toBe(
-      1,
-    );
+    expect(computeCurrentStreak(new Set(["2026-03-10"]), "2026-03-10")).toBe(1);
   });
 
   it("counts a consecutive run ending today", () => {

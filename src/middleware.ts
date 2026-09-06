@@ -16,6 +16,7 @@ const PROTECTED_PREFIXES = [
   "/analyze",
   "/entries",
   "/insights",
+  "/export",
 ];
 
 export async function middleware(req: NextRequest) {
@@ -55,5 +56,6 @@ export const config = {
     "/analyze/:path*",
     "/entries/:path*",
     "/insights/:path*",
+    "/export/:path*",
   ],
 };

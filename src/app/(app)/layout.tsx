@@ -26,6 +26,7 @@ export default async function AppLayout({
           <Link href="/dashboard">Dashboard</Link>
           <Link href="/capture">Log meal</Link>
           <Link href="/insights">Insights</Link>
+          <Link href="/export">Export</Link>
           <Link href="/profile">Profile</Link>
         </nav>
         <form

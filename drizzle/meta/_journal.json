@@ -15,6 +15,13 @@
       "when": 1788550884803,
       "tag": "0001_amusing_shatterstar",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788654860705,
+      "tag": "0002_old_robbie_robertson",
+      "breakpoints": true
     }
   ]
 }

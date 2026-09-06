@@ -26,7 +26,9 @@ export function computeCurrentStreak(
   loggedDates: ReadonlySet<string>,
   todayLocal: string,
 ): number {
-  let cursor = loggedDates.has(todayLocal) ? todayLocal : previousDay(todayLocal);
+  let cursor = loggedDates.has(todayLocal)
+    ? todayLocal
+    : previousDay(todayLocal);
   let count = 0;
   while (loggedDates.has(cursor)) {
     count += 1;

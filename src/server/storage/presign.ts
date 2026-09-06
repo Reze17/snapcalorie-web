@@ -19,6 +19,15 @@ export function buildMealImageKey(userId: string): string {
   return `users/${userId}/meals/${randomUUID()}.jpg`;
 }
 
+/** userId must come from the authenticated session, never client input. */
+export function buildExportKey(
+  userId: string,
+  jobId: string,
+  format: "csv" | "pdf",
+): string {
+  return `users/${userId}/exports/${jobId}.${format}`;
+}
+
 export async function createPresignedUploadUrl(
   userId: string,
 ): Promise<PresignedUpload> {
@@ -40,6 +49,28 @@ export async function createPresignedUploadUrl(
  */
 export async function createPresignedDownloadUrl(key: string): Promise<string> {
   const command = new GetObjectCommand({ Bucket: S3_BUCKET, Key: key });
+  return getSignedUrl(s3Client, command, {
+    expiresIn: PRESIGNED_URL_EXPIRY_SECONDS,
+  });
+}
+
+/**
+ * Same as createPresignedDownloadUrl, but sets Content-Disposition/-Type on
+ * the S3 response itself (ResponseContentDisposition/-Type are standard
+ * S3 GetObject params) so the browser downloads with the right filename
+ * without our server proxying the file's bytes.
+ */
+export async function createPresignedExportDownloadUrl(
+  key: string,
+  filename: string,
+  contentType: string,
+): Promise<string> {
+  const command = new GetObjectCommand({
+    Bucket: S3_BUCKET,
+    Key: key,
+    ResponseContentDisposition: `attachment; filename="${filename}"`,
+    ResponseContentType: contentType,
+  });
   return getSignedUrl(s3Client, command, {
     expiresIn: PRESIGNED_URL_EXPIRY_SECONDS,
   });

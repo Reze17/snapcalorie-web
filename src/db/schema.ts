@@ -135,6 +135,37 @@ export const mealItems = pgTable(
   (table) => [index("meal_items_entry_idx").on(table.entryId)],
 );
 
+// Not part of the FRD §5 DDL — added in Phase 9 to support async CSV/PDF
+// generation for large date ranges (FR-10). storageKey points at the
+// generated file in the same S3-compatible bucket used for meal photos.
+export const exportJobs = pgTable(
+  "export_jobs",
+  {
+    jobId: uuid("job_id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    format: varchar("format", { length: 8 }).notNull(), // "csv" | "pdf"
+    fromDate: date("from_date").notNull(),
+    toDate: date("to_date").notNull(),
+    status: varchar("status", { length: 16 }).notNull().default("pending"), // pending | processing | ready | failed
+    storageKey: text("storage_key"),
+    errorMessage: text("error_message"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("export_jobs_user_created_idx").on(
+      table.userId,
+      table.createdAt.desc(),
+    ),
+  ],
+);
+
 export const dailySummaries = pgTable(
   "daily_summaries",
   {
