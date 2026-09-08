@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { AnthropicVisionService } from "./anthropic-vision-service";
 import { getVisionService } from "./factory";
 import { MockVisionService } from "./mock-vision-service";
+import { OllamaVisionService } from "./ollama-vision-service";
 
 describe("getVisionService", () => {
   const originalProvider = process.env.VISION_PROVIDER;
@@ -35,6 +36,11 @@ describe("getVisionService", () => {
     process.env.VISION_PROVIDER = "anthropic";
     process.env.VISION_API_KEY = "test-key";
     expect(getVisionService()).toBeInstanceOf(AnthropicVisionService);
+  });
+
+  it("returns OllamaVisionService when VISION_PROVIDER=ollama — same call site as mock/anthropic", () => {
+    process.env.VISION_PROVIDER = "ollama";
+    expect(getVisionService()).toBeInstanceOf(OllamaVisionService);
   });
 
   it("throws a clear not-implemented error for openai/google", () => {

@@ -1,17 +1,12 @@
 import Anthropic, { APIConnectionTimeoutError } from "@anthropic-ai/sdk";
 import type { z } from "zod";
 import { logEvent } from "@/server/lib/log";
+import { toDetectedFood } from "./derive-macros";
 import { VisionAnalysisFailedError, VisionServiceTimeoutError } from "./errors";
-import { round2 } from "./round";
-import {
-  foodSearchListSchema,
-  rawAnalysisSchema,
-  type RawDetectedFood,
-} from "./schema";
+import { foodSearchListSchema, rawAnalysisSchema } from "./schema";
 import type {
   AnalysisResult,
   AnalyzeMealImageInput,
-  DetectedFood,
   FoodSearchResult,
   INutritionVisionService,
 } from "./types";
@@ -164,21 +159,6 @@ const SEARCH_TOOL: Anthropic.Tool = {
 const SEARCH_SYSTEM_PROMPT = `You are a nutrition lookup assistant. Given a food search query, return up to 5 plausible distinct foods it could refer to, each with standard per-100g macros (calories, protein, carbs, fat) based on typical nutrition data. Order results by how well they match the query. If the query is nonsensical or clearly not food, return an empty results array.
 
 Call the ${SEARCH_TOOL_NAME} tool exactly once. Do not output any text outside the tool call.`;
-
-function toDetectedFood(raw: RawDetectedFood): DetectedFood {
-  const factor = raw.portionGrams / 100;
-  return {
-    foodName: raw.foodName,
-    portionGrams: raw.portionGrams,
-    calories: round2(raw.per100g.calories * factor),
-    protein: round2(raw.per100g.protein * factor),
-    carbs: round2(raw.per100g.carbs * factor),
-    fat: round2(raw.per100g.fat * factor),
-    confidence: raw.confidence,
-    alternatives: raw.alternatives,
-    per100g: raw.per100g,
-  };
-}
 
 function logAnalysisEvent(fields: Record<string, unknown>): void {
   logEvent("vision_analysis", fields);

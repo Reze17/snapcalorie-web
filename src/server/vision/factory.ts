@@ -1,15 +1,18 @@
 import { AnthropicVisionService } from "./anthropic-vision-service";
 import { VisionServiceNotImplementedError } from "./errors";
 import { MockVisionService } from "./mock-vision-service";
+import { OllamaVisionService } from "./ollama-vision-service";
 import type { INutritionVisionService } from "./types";
 
-export type VisionProvider = "mock" | "openai" | "anthropic" | "google";
+export type VisionProvider =
+  "mock" | "openai" | "anthropic" | "google" | "ollama";
 
 const KNOWN_PROVIDERS: VisionProvider[] = [
   "mock",
   "openai",
   "anthropic",
   "google",
+  "ollama",
 ];
 
 function isKnownProvider(value: string): value is VisionProvider {
@@ -35,6 +38,8 @@ export function getVisionService(): INutritionVisionService {
       return new MockVisionService();
     case "anthropic":
       return new AnthropicVisionService();
+    case "ollama":
+      return new OllamaVisionService();
     case "openai":
     case "google":
       throw new VisionServiceNotImplementedError(provider);

@@ -112,15 +112,17 @@ user is auto-provisioned, and a banner reminds you it's on. Set it back to
 ## Vision service
 
 **Swapping providers is one env var, no code changes**: set
-`VISION_PROVIDER=mock` or `anthropic` in `.env` and restart. Adding a new
-real provider means implementing `INutritionVisionService` (`src/server/vision/types.ts`),
-adding a `case` in `src/server/vision/factory.ts`'s `getVisionService()`, and
-running it through `runVisionServiceContractTests` (`src/server/vision/contract.ts`) —
+`VISION_PROVIDER=mock`, `anthropic`, or `ollama` in `.env` and restart.
+Adding a new real provider means implementing `INutritionVisionService`
+(`src/server/vision/types.ts`), adding a `case` in
+`src/server/vision/factory.ts`'s `getVisionService()`, and running it
+through `runVisionServiceContractTests` (`src/server/vision/contract.ts`) —
 every call site (`/analyze`, the accuracy harness, etc.) depends only on the
 interface and needs no changes at all.
 
-`src/server/vision/` holds the `INutritionVisionService` interface and two
-implementations, selected by `VISION_PROVIDER` with zero call-site changes:
+`src/server/vision/` holds the `INutritionVisionService` interface and
+three implementations, selected by `VISION_PROVIDER` with zero call-site
+changes:
 
 ```ts
 import { getVisionService } from "@/server/vision/factory";
@@ -138,12 +140,21 @@ const result = await vision.analyzeMealImage({ imageBuffer, mimeType });
 - `VISION_PROVIDER=anthropic` calls Claude's Messages API (multimodal,
   forced tool-use for structured output) — see "Testing meal detection end
   to end" below for setup.
+- `VISION_PROVIDER=ollama` runs inference **entirely locally** against a
+  local `ollama serve` — no API key, no network call, nothing leaves your
+  machine. Needs Ollama installed and a vision-capable model already
+  pulled: `ollama pull qwen2.5vl:7b` (better structured-output adherence)
+  or `ollama pull llava` (smaller, most commonly pre-pulled). Configure via
+  `VISION_OLLAMA_HOST` (default `http://localhost:11434`),
+  `VISION_OLLAMA_MODEL`, and `VISION_OLLAMA_TIMEOUT_MS` (default 60s — local
+  CPU inference is much slower and more variable than a cloud API).
 - `openai` / `google` are accepted by `VISION_PROVIDER` but throw a clear
   "not implemented yet" error.
 - `src/server/vision/contract.ts` is a reusable Vitest suite
   (`runVisionServiceContractTests`) that any implementation must pass; run
-  against both the mock (`mock-vision-service.test.ts`) and a mocked-network
-  Anthropic client (`anthropic-vision-service.test.ts`).
+  against the mock (`mock-vision-service.test.ts`), a mocked-network
+  Anthropic client (`anthropic-vision-service.test.ts`), and a mocked-`fetch`
+  Ollama client (`ollama-vision-service.test.ts`).
 
 ## Testing capture & upload end to end
 
@@ -200,6 +211,25 @@ To use the real Claude vision provider instead:
    can still search or add items manually while it's in that state.
 7. Switch `VISION_PROVIDER` back to `mock` at any time — no other code
    changes needed.
+
+To use a fully local model via Ollama instead (no API key, no network call):
+
+1. Install [Ollama](https://ollama.com), then run `ollama serve` (or just
+   open the Ollama app).
+2. Pull a vision-capable model: `ollama pull qwen2.5vl:7b` (better at
+   following the structured-output schema) or `ollama pull llava` (smaller,
+   the most commonly pre-pulled multimodal model).
+3. In `.env`, set `VISION_PROVIDER=ollama` and `VISION_OLLAMA_MODEL` to
+   whichever you pulled (defaults to `llava`).
+4. Restart the dev server, then upload a real photo on `/capture` — same
+   editable review screen, confidence flagging, and retry behavior as the
+   Anthropic path above. Local CPU inference is much slower and more
+   variable than a cloud API, so `/analyze` may take well over the 12s
+   Anthropic timeout — `VISION_OLLAMA_TIMEOUT_MS` defaults to 60s to
+   account for that; raise it further if your hardware needs more.
+5. If Ollama isn't running, or the model hasn't been pulled, the error
+   message tells you exactly which (`ollama serve` / `ollama pull <model>`)
+   rather than a generic failure.
 
 ## Testing the review & edit screen
 
