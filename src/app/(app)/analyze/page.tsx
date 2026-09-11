@@ -2,15 +2,25 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getEffectiveUser } from "@/server/dev-bypass";
 import { AnalysisView } from "./AnalysisView";
-import { runAnalysis } from "./actions";
+import { getTodayBudget, runAnalysis } from "./actions";
 
 // Split out so the page shell (heading, nav) can stream to the client
 // immediately via the Suspense boundary below, instead of the whole page
 // blocking on the vision call — a real (not decorative) use of Next's RSC
 // streaming, per the Phase 10 latency pass.
 async function AnalysisResult({ objectKey }: { objectKey: string }) {
-  const outcome = await runAnalysis(objectKey);
-  return <AnalysisView objectKey={objectKey} initialOutcome={outcome} />;
+  const [outcome, budget] = await Promise.all([
+    runAnalysis(objectKey),
+    getTodayBudget(),
+  ]);
+  return (
+    <AnalysisView
+      objectKey={objectKey}
+      initialOutcome={outcome}
+      consumedToday={budget.consumedToday}
+      dailyTarget={budget.dailyTarget}
+    />
+  );
 }
 
 function AnalysisSkeleton() {

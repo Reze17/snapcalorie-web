@@ -31,7 +31,56 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
+
+  // --- Personalized goal system (post-Phase-10) ---
+  // All nullable: a user who signed up before this feature, or who hasn't
+  // finished onboarding yet, has none of these set. onboardingCompletedAt
+  // is the single gate the (app) layout checks to redirect to /onboarding
+  // — everything else here is an input to src/lib/goal-calc.ts, not a
+  // gate itself.
+  age: integer("age"),
+  sex: varchar("sex", { length: 6 }), // "male" | "female" — Mifflin-St Jeor needs a binary term
+  heightCm: numeric("height_cm", { precision: 5, scale: 1 }),
+  activityLevel: varchar("activity_level", { length: 16 }), // sedentary | light | moderate | very_active
+  goalType: varchar("goal_type", { length: 8 }), // lose | maintain | gain
+  targetWeightKg: numeric("target_weight_kg", { precision: 5, scale: 1 }),
+  targetDate: date("target_date"),
+  onboardingCompletedAt: timestamp("onboarding_completed_at", {
+    withTimezone: true,
+  }),
 });
+
+// A user's weight is a time series, not a single column — this is the
+// source of truth for both "current weight" (its latest row) and the
+// weight-trend card (its full history). One entry per local day, upserted
+// like daily_summaries, so re-logging today's weight corrects rather than
+// duplicates.
+export const weightLogs = pgTable(
+  "weight_logs",
+  {
+    weightLogId: uuid("weight_log_id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    loggedDate: date("logged_date").notNull(),
+    weightKg: numeric("weight_kg", { precision: 5, scale: 1 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("weight_logs_user_date_unique").on(
+      table.userId,
+      table.loggedDate,
+    ),
+    index("weight_logs_user_date_idx").on(
+      table.userId,
+      table.loggedDate.desc(),
+    ),
+  ],
+);
 
 // Auth.js (NextAuth v5) adapter tables. Session strategy is JWT (see
 // src/auth.ts for why), so `sessions` stays unused by credentials

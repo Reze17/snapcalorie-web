@@ -18,6 +18,8 @@ const PROTECTED_PREFIXES = [
   "/insights",
   "/export",
   "/admin",
+  "/onboarding",
+  "/goal",
 ];
 
 // The S3-compatible object store is a different origin than the app

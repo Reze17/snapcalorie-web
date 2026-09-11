@@ -27,6 +27,21 @@ export default async function ProfilePage() {
         <p className="mt-1 text-sm font-semibold text-text">{user.email}</p>
       </div>
 
+      <Link
+        href={user.onboardingCompletedAt ? "/goal" : "/onboarding"}
+        className="flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-3.5"
+      >
+        <div>
+          <p className="text-sm font-semibold">Your goal</p>
+          <p className="text-xs text-text-muted">
+            {user.onboardingCompletedAt
+              ? `${user.goalType === "lose" ? "Losing weight" : user.goalType === "gain" ? "Gaining weight" : "Maintaining weight"} · ${user.dailyCalorieTarget.toLocaleString()} kcal/day`
+              : "Set up a personalized calorie target"}
+          </p>
+        </div>
+        <span className="text-text-muted">›</span>
+      </Link>
+
       <ProfileForm
         dailyCalorieTarget={user.dailyCalorieTarget}
         timezone={user.timezone}

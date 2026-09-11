@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
+import { evaluateProspectiveMeal } from "@/lib/day-feedback";
 import { computeAbsoluteMacros } from "@/lib/portion-scaling";
 import type {
   DetectedFood,
@@ -64,9 +65,16 @@ function ConfidenceBadge({
 export function AnalysisView({
   objectKey,
   initialOutcome,
+  consumedToday,
+  dailyTarget,
 }: {
   objectKey: string;
   initialOutcome: AnalysisOutcome;
+  /** Already logged today, before this meal — what "after this meal: N
+   * kcal remaining" is computed against (FR: connect the scanner
+   * straight to the personalized goal, not just report calories). */
+  consumedToday: number;
+  dailyTarget: number;
 }) {
   const router = useRouter();
   const [outcome, setOutcome] = useState(initialOutcome);
@@ -74,6 +82,10 @@ export function AnalysisView({
     itemsFromOutcome(initialOutcome),
   );
   const [isRetrying, startRetryTransition] = useTransition();
+  const [overBudgetDismissed, setOverBudgetDismissed] = useState(false);
+  const itemListRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const firstGramsInputRef = useRef<HTMLInputElement>(null);
 
   const [replacingId, setReplacingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -104,6 +116,11 @@ export function AnalysisView({
         { calories: 0, protein: 0, carbs: 0, fat: 0 },
       ),
     [items],
+  );
+
+  const prospective = useMemo(
+    () => evaluateProspectiveMeal(dailyTarget, consumedToday, totals.calories),
+    [dailyTarget, consumedToday, totals.calories],
   );
 
   function updateItem(
@@ -320,8 +337,8 @@ export function AnalysisView({
         </p>
       )}
 
-      <div className="flex flex-col gap-3">
-        {items.map(({ localId, item, isUserEdited }) => {
+      <div ref={itemListRef} className="flex flex-col gap-3">
+        {items.map(({ localId, item, isUserEdited }, index) => {
           const ambiguous = !isUserEdited && item.confidence < 0.7;
           return (
             <div
@@ -339,11 +356,37 @@ export function AnalysisView({
               </div>
 
               {ambiguous && (
-                <div className="flex gap-2 rounded-xl bg-info-soft px-3 py-2 text-xs text-info">
+                <div className="flex flex-col gap-2 rounded-xl bg-info-soft px-3 py-2 text-xs text-info">
                   <span>
-                    Not fully sure about this one — check the portion and swap
-                    it below if it looks off.
+                    I&apos;m not completely sure about the portion size.
                   </span>
+                  {/* Only ever shown while isUserEdited is still false, so
+                      item.portionGrams here is still the original AI
+                      estimate — safe to scale directly, no separate
+                      "base" value needs to be tracked. */}
+                  <div className="flex gap-1.5">
+                    {(
+                      [
+                        ["Small", 0.7],
+                        ["Medium", 1],
+                        ["Large", 1.3],
+                      ] as const
+                    ).map(([label, factor]) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() =>
+                          handleGramsChange(
+                            localId,
+                            String(Math.round(item.portionGrams * factor)),
+                          )
+                        }
+                        className="rounded-full border border-info/40 bg-surface px-3 py-1 font-semibold text-info"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -357,6 +400,7 @@ export function AnalysisView({
                   −
                 </button>
                 <input
+                  ref={index === 0 ? firstGramsInputRef : undefined}
                   type="number"
                   inputMode="decimal"
                   value={item.portionGrams}
@@ -444,6 +488,7 @@ export function AnalysisView({
         </div>
         <form onSubmit={handleSearchSubmit} className="flex gap-2">
           <input
+            ref={searchInputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -542,6 +587,51 @@ export function AnalysisView({
         {customError && <p className="text-sm text-err">{customError}</p>}
       </section>
 
+      {items.length > 0 && prospective.isOverTarget && !overBudgetDismissed && (
+        <div className="flex flex-col gap-2.5 rounded-2xl bg-info-soft p-4 text-info">
+          <p className="text-sm font-semibold">
+            This would put you about{" "}
+            <span className="num">{prospective.overBy}</span> kcal over
+            today&apos;s target.
+          </p>
+          <div className="flex flex-wrap gap-2 text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => setOverBudgetDismissed(true)}
+              className="rounded-full bg-info px-3 py-1.5 text-accent-ink"
+            >
+              Continue anyway
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                itemListRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+                firstGramsInputRef.current?.focus();
+              }}
+              className="rounded-full border border-info/40 px-3 py-1.5"
+            >
+              Choose a lighter portion
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                searchInputRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                });
+                searchInputRef.current?.focus();
+              }}
+              className="rounded-full border border-info/40 px-3 py-1.5"
+            >
+              See lower-calorie alternatives
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="sticky bottom-[calc(env(safe-area-inset-bottom)+8px)] rounded-2xl border border-border bg-surface px-4 py-3 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)]">
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm">
@@ -549,6 +639,13 @@ export function AnalysisView({
             <div className="num text-xs text-text-muted">
               {totals.protein}g P · {totals.carbs}g C · {totals.fat}g F
             </div>
+            {items.length > 0 && (
+              <div className="num mt-0.5 text-xs font-semibold text-accent">
+                {prospective.isOverTarget
+                  ? `${prospective.overBy} kcal over today's target`
+                  : `After this meal: ${prospective.remainingAfter} kcal remaining`}
+              </div>
+            )}
           </div>
           <button
             type="button"

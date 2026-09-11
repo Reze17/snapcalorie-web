@@ -4,7 +4,10 @@ import Decimal from "decimal.js";
 import { getEffectiveUser } from "@/server/dev-bypass";
 import { logEvent, recordLatency } from "@/server/lib/log";
 import { checkRateLimit } from "@/server/lib/rate-limit";
+import { instantToLocalDate } from "@/server/lib/timezone";
+import { getDailySummary } from "@/server/repositories/daily-summaries";
 import { createMealEntryWithItems } from "@/server/repositories/meal-entries";
+import { getUserById } from "@/server/repositories/users";
 import { getObjectBuffer } from "@/server/storage/objects";
 import {
   objectKeySchema,
@@ -27,6 +30,34 @@ import type {
 export type AnalysisOutcome =
   | { status: "ok"; result: AnalysisResult }
   | { status: "failed"; message: string };
+
+export interface TodayBudget {
+  consumedToday: number;
+  dailyTarget: number;
+}
+
+/**
+ * What the review screen needs to show "after this meal: N kcal
+ * remaining" (FR: the AI scanner should connect straight to the
+ * personalized goal, not just report calories in isolation). A user with
+ * no goal set yet still gets the default daily_calorie_target (2000).
+ */
+export async function getTodayBudget(): Promise<TodayBudget> {
+  const user = await getEffectiveUser();
+  if (!user) {
+    throw new Error("You must be signed in.");
+  }
+  const dbUser = await getUserById(user.id);
+  if (!dbUser) {
+    throw new Error("You must be signed in.");
+  }
+  const todayLocal = instantToLocalDate(new Date(), dbUser.timezone);
+  const summary = await getDailySummary(user.id, todayLocal);
+  return {
+    consumedToday: summary ? Number(summary.consumedCalories) : 0,
+    dailyTarget: summary ? summary.targetCalories : dbUser.dailyCalorieTarget,
+  };
+}
 
 const ANALYSIS_RATE_LIMIT = 30;
 const ANALYSIS_RATE_WINDOW_SECONDS = 60 * 60; // 1 hour, per FRD §6

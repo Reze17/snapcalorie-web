@@ -37,7 +37,7 @@ const TABS = [
   {
     href: "/profile",
     label: "Profile",
-    match: ["/profile", "/export"],
+    match: ["/profile", "/export", "/goal"],
     icon: (
       <>
         <circle

@@ -1,6 +1,7 @@
 import { DateTime } from "luxon";
 import { redirect } from "next/navigation";
 import { InsightsCharts } from "./InsightsCharts";
+import { WeightProgressCard } from "./WeightProgressCard";
 import { buildChartWindow, computeWindowStats } from "@/lib/insights";
 import { computeBestStreak, computeCurrentStreak } from "@/lib/streak";
 import { getEffectiveUser } from "@/server/dev-bypass";
@@ -10,6 +11,10 @@ import {
   getStreakHistory,
 } from "@/server/repositories/daily-summaries";
 import { getUserById } from "@/server/repositories/users";
+import {
+  getFirstWeight,
+  getLatestWeight,
+} from "@/server/repositories/weight-logs";
 
 export default async function InsightsPage() {
   const effectiveUser = await getEffectiveUser();
@@ -45,6 +50,10 @@ export default async function InsightsPage() {
   const currentStreak = computeCurrentStreak(new Set(loggedDates), todayLocal);
   const bestStreak = computeBestStreak(new Set(loggedDates));
 
+  const [firstWeight, latestWeight] = user.onboardingCompletedAt
+    ? await Promise.all([getFirstWeight(user.id), getLatestWeight(user.id)])
+    : [null, null];
+
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-lg font-bold">Progress</h1>
@@ -75,6 +84,17 @@ export default async function InsightsPage() {
           ? "No active streak yet — log a meal today to start one. Every day is a fresh start."
           : "Keep it going, one day at a time."}
       </p>
+
+      {firstWeight && latestWeight && (
+        <WeightProgressCard
+          startWeightKg={Number(firstWeight.weightKg)}
+          currentWeightKg={Number(latestWeight.weightKg)}
+          targetWeightKg={
+            user.targetWeightKg ? Number(user.targetWeightKg) : null
+          }
+          goalType={user.goalType}
+        />
+      )}
 
       <InsightsCharts window7={window7} window30={window30} />
 
