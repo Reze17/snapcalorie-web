@@ -70,9 +70,9 @@ test.describe("responsive audit (360 / 768 / 1440 / 3840px)", () => {
       const page = await context.newPage();
       await page.goto("/dashboard");
       await assertNoHorizontalScroll(page);
-      // The nav must stay reachable (not clipped) even in its scrollable
-      // form at narrow widths — see src/app/(app)/layout.tsx.
-      await expect(page.getByRole("link", { name: "Insights" })).toBeVisible();
+      // The bottom nav must stay reachable (not clipped) at every width —
+      // see src/app/(app)/BottomNav.tsx.
+      await expect(page.getByRole("link", { name: "Progress" })).toBeVisible();
       await context.close();
     });
 

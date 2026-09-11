@@ -1,8 +1,84 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------
+   SnapCalorie design tokens.
+   Palette: warm paper ground, one reserved accent ("ember" — a nod to
+   the calorie-as-heat-unit origin of the word) used only for the primary
+   action, progress fill, and active nav state. "good"/"info" are
+   semantic, not decorative, and are never used for an over-target state
+   — see the dashboard's non-punitive rule (CLAUDE.md, Phase 7).
+   Three-state theme: bare :root is the light palette; the media query
+   covers an unset ("system") preference; [data-theme] covers an
+   explicit toggle in either direction, should one ever be added.
+   --------------------------------------------------------------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f6f2ec;
+  --surface: #ffffff;
+  --surface-2: #fceee1;
+  --surface-3: #efe7d9;
+  --text: #241f1a;
+  --text-muted: #7c7267;
+  --text-faint: #a79c8e;
+  --border: #e7dfd1;
+  --accent: #e8542a;
+  --accent-strong: #c23f1b;
+  --accent-soft: #fbe0d4;
+  --accent-ink: #fff8f4;
+  --good: #5b8c67;
+  --good-soft: #e4eee1;
+  --info: #b8842e;
+  --info-soft: #f5e9d3;
+  --err: #a15b4c;
+  --err-soft: #f3e2dc;
+
+  /* legacy aliases — a handful of not-yet-restyled pages still read
+     these two directly via var(--foreground)/var(--background). */
+  --background: var(--bg);
+  --foreground: var(--text);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #18130f;
+    --surface: #221b15;
+    --surface-2: #2c2117;
+    --surface-3: #33281c;
+    --text: #f3ebe1;
+    --text-muted: #b7aa9b;
+    --text-faint: #8b7f71;
+    --border: #3a2e22;
+    --accent: #ff6b3d;
+    --accent-strong: #ff8b5e;
+    --accent-soft: #402417;
+    --accent-ink: #1b0f09;
+    --good: #86c293;
+    --good-soft: #24302a;
+    --info: #e3ae55;
+    --info-soft: #382c18;
+    --err: #d68e7c;
+    --err-soft: #3b2620;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #18130f;
+  --surface: #221b15;
+  --surface-2: #2c2117;
+  --surface-3: #33281c;
+  --text: #f3ebe1;
+  --text-muted: #b7aa9b;
+  --text-faint: #8b7f71;
+  --border: #3a2e22;
+  --accent: #ff6b3d;
+  --accent-strong: #ff8b5e;
+  --accent-soft: #402417;
+  --accent-ink: #1b0f09;
+  --good: #86c293;
+  --good-soft: #24302a;
+  --info: #e3ae55;
+  --info-soft: #382c18;
+  --err: #d68e7c;
+  --err-soft: #3b2620;
 }
 
 /* Mobile-first breakpoint scale. Base (unprefixed) styles target the
@@ -19,15 +95,30 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-err: var(--err);
+  --color-err-soft: var(--err-soft);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-karla), var(--font-geist-sans), system-ui, sans-serif;
+  --font-display:
+    var(--font-bricolage), var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono:
+    var(--font-plex-mono), var(--font-geist-mono), ui-monospace, monospace;
 }
 
 html,
@@ -37,7 +128,31 @@ body {
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  text-wrap: balance;
+}
+
+/* Digits that should line up in columns — calorie totals, macro grams,
+   dates — use the mono face with tabular figures throughout the app. */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -35,12 +35,12 @@ function TooltipContent({
   const consumed = payload.find((p) => p.dataKey === "consumed")?.value ?? 0;
   const target = payload.find((p) => p.dataKey === "target")?.value ?? 0;
   return (
-    <div className="rounded border border-white/20 bg-[var(--background)] px-2 py-1 text-xs shadow">
-      <p className="font-medium">
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs shadow-lg">
+      <p className="font-semibold text-[var(--text)]">
         {label ? DateTime.fromISO(label).toFormat("EEE, MMM d") : ""}
       </p>
-      <p>{consumed} kcal consumed</p>
-      <p className="text-[var(--foreground)]/60">{target} kcal target</p>
+      <p className="num text-[var(--text)]">{consumed} kcal consumed</p>
+      <p className="num text-[var(--text-muted)]">{target} kcal target</p>
     </div>
   );
 }
@@ -54,30 +54,30 @@ function Chart({ days }: { days: ChartDay[] }) {
         data={days}
         margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
       >
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
         <XAxis
           dataKey="date"
           tickFormatter={formatTick}
           interval={tickInterval}
-          tick={{ fontSize: 11 }}
-          stroke="rgba(255,255,255,0.4)"
+          tick={{ fontSize: 11, fill: "var(--text-faint)" }}
+          stroke="var(--border)"
         />
         <YAxis
           tickFormatter={formatCalories}
-          tick={{ fontSize: 11 }}
-          stroke="rgba(255,255,255,0.4)"
+          tick={{ fontSize: 11, fill: "var(--text-faint)" }}
+          stroke="var(--border)"
           width={34}
         />
         <Tooltip content={<TooltipContent />} />
         <Bar
           dataKey="consumed"
-          fill="rgba(255,255,255,0.5)"
-          radius={[2, 2, 0, 0]}
+          fill="var(--accent)"
+          radius={[4, 4, 0, 0]}
           isAnimationActive={false}
         />
         <Line
           dataKey="target"
-          stroke="#f0b429"
+          stroke="var(--info)"
           strokeWidth={2}
           strokeDasharray="4 3"
           dot={false}
@@ -100,15 +100,15 @@ export function InsightsCharts({
   const days = range === "7" ? window7 : window30;
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-white/10 p-3">
+    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">Calories vs. target</span>
-        <div className="flex gap-1 text-xs">
+        <span className="text-sm font-bold">Calories vs. target</span>
+        <div className="flex gap-1 rounded-full bg-surface-3 p-0.5 text-xs font-semibold">
           <button
             type="button"
             onClick={() => setRange("7")}
-            className={`rounded px-2 py-1 ${
-              range === "7" ? "bg-white/20" : "text-[var(--foreground)]/60"
+            className={`rounded-full px-2.5 py-1 ${
+              range === "7" ? "bg-accent text-accent-ink" : "text-text-muted"
             }`}
           >
             7d
@@ -116,8 +116,8 @@ export function InsightsCharts({
           <button
             type="button"
             onClick={() => setRange("30")}
-            className={`rounded px-2 py-1 ${
-              range === "30" ? "bg-white/20" : "text-[var(--foreground)]/60"
+            className={`rounded-full px-2.5 py-1 ${
+              range === "30" ? "bg-accent text-accent-ink" : "text-text-muted"
             }`}
           >
             30d
@@ -125,13 +125,13 @@ export function InsightsCharts({
         </div>
       </div>
       <Chart days={days} />
-      <div className="flex items-center gap-3 text-xs text-[var(--foreground)]/60">
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-sm bg-white/50" />
+      <div className="flex items-center gap-4 text-xs text-text-muted">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2 w-2 rounded-sm bg-accent" />
           Consumed
         </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-0.5 w-3 bg-[#f0b429]" />
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-0.5 w-3 bg-info" />
           Target
         </span>
       </div>

@@ -25,9 +25,9 @@ export default async function ExportPage({
   const { pending } = await searchParams;
 
   return (
-    <main className="flex flex-col gap-6">
-      <h1 className="text-lg font-semibold">Export your data</h1>
-      <p className="text-sm text-[var(--foreground)]/70">
+    <div className="flex flex-col gap-6">
+      <h1 className="text-lg font-bold">Export your data</h1>
+      <p className="text-sm text-text-muted">
         Download your meal history as a CSV spreadsheet or a PDF report.
         {earliest
           ? ` Your history starts on ${earliest}.`
@@ -38,12 +38,12 @@ export default async function ExportPage({
         <ExportJobStatus jobId={pending} />
       ) : (
         <form
-          className="flex flex-col gap-4 rounded-lg border border-white/10 p-4"
+          className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-4"
           method="get"
           action="/api/export/csv"
         >
-          <div className="flex flex-col gap-1">
-            <label htmlFor="from" className="text-sm">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="from" className="text-sm font-semibold">
               From
             </label>
             <input
@@ -52,14 +52,14 @@ export default async function ExportPage({
               type="date"
               max={todayLocal}
               placeholder="All time"
-              className="h-11 rounded border border-white/20 bg-transparent px-3 text-sm"
+              className="h-11 rounded-xl border border-border bg-bg px-3 text-sm"
             />
-            <span className="text-xs text-[var(--foreground)]/60">
+            <span className="text-xs text-text-faint">
               Leave blank for your complete history.
             </span>
           </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="to" className="text-sm">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="to" className="text-sm font-semibold">
               To
             </label>
             <input
@@ -68,32 +68,32 @@ export default async function ExportPage({
               type="date"
               defaultValue={todayLocal}
               max={todayLocal}
-              className="h-11 rounded border border-white/20 bg-transparent px-3 text-sm"
+              className="h-11 rounded-xl border border-border bg-bg px-3 text-sm"
             />
           </div>
           <div className="flex gap-3">
             <button
               type="submit"
               formAction="/api/export/csv"
-              className="flex-1 rounded bg-white/10 px-4 py-3 text-center text-sm font-medium hover:bg-white/20"
+              className="flex-1 rounded-xl border border-border px-4 py-3 text-center text-sm font-bold"
             >
               Download CSV
             </button>
             <button
               type="submit"
               formAction="/api/export/pdf"
-              className="flex-1 rounded bg-white/10 px-4 py-3 text-center text-sm font-medium hover:bg-white/20"
+              className="flex-1 rounded-xl bg-accent px-4 py-3 text-center text-sm font-bold text-accent-ink"
             >
               Download PDF
             </button>
           </div>
-          <p className="text-xs text-[var(--foreground)]/60">
+          <p className="text-xs text-text-faint">
             A large date range (over 90 days) generates in the background —
             you&apos;ll see a progress state here and can download once
             it&apos;s ready.
           </p>
         </form>
       )}
-    </main>
+    </div>
   );
 }

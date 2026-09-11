@@ -33,9 +33,12 @@ export function ProfileForm({
   }, [timezone]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1 text-sm">
-        Daily calorie target
+    <form
+      action={formAction}
+      className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-4"
+    >
+      <label className="flex flex-col gap-1.5 text-sm">
+        <span className="font-semibold">Daily calorie goal</span>
         <input
           type="number"
           name="dailyCalorieTarget"
@@ -44,16 +47,16 @@ export function ProfileForm({
           max={8000}
           step={1}
           required
-          className="rounded border border-white/20 bg-transparent px-3 py-2"
+          className="num rounded-xl border border-border bg-bg px-3 py-2.5 text-base"
         />
       </label>
-      <label className="flex flex-col gap-1 text-sm">
-        Timezone
+      <label className="flex flex-col gap-1.5 text-sm">
+        <span className="font-semibold">Timezone</span>
         <select
           name="timezone"
           value={selectedTimezone}
           onChange={(e) => setSelectedTimezone(e.target.value)}
-          className="rounded border border-white/20 bg-transparent px-3 py-2"
+          className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm"
         >
           {timezones.map((tz) => (
             <option key={tz} value={tz}>
@@ -62,16 +65,14 @@ export function ProfileForm({
           ))}
         </select>
       </label>
-      {state.error && (
-        <p className="text-sm text-[var(--foreground)]/70">{state.error}</p>
-      )}
+      {state.error && <p className="text-sm text-err">{state.error}</p>}
       {state.success && (
-        <p className="text-sm text-[var(--foreground)]/70">Saved.</p>
+        <p className="text-sm font-semibold text-good">Saved.</p>
       )}
       <button
         type="submit"
         disabled={pending}
-        className="rounded bg-white/10 px-4 py-2 text-sm hover:bg-white/20 disabled:opacity-60"
+        className="rounded-xl bg-accent px-4 py-2.5 text-sm font-bold text-accent-ink disabled:opacity-60"
       >
         {pending ? "Saving…" : "Save changes"}
       </button>

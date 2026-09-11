@@ -441,7 +441,7 @@ match "Environment variables" above). Two things only matter on this host:
 
 - **`vercel-build`** (package.json) runs `drizzle-kit migrate` against
   `DATABASE_URL_UNPOOLED` (falling back to `DATABASE_URL`) before `next
-  build`, since there's no long-lived process to run `npm run db:migrate`
+build`, since there's no long-lived process to run `npm run db:migrate`
   from separately — Vercel picks this script up automatically instead of
   plain `build`. The unpooled URL is used because DDL through a
   transaction-mode pooler (PgBouncer, which is what Neon's default pooled

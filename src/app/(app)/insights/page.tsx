@@ -46,8 +46,8 @@ export default async function InsightsPage() {
   const bestStreak = computeBestStreak(new Set(loggedDates));
 
   return (
-    <main className="flex flex-col gap-6">
-      <h1 className="text-lg font-semibold">Insights</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="text-lg font-bold">Progress</h1>
 
       <div className="grid grid-cols-2 gap-3">
         <StatTile
@@ -70,7 +70,7 @@ export default async function InsightsPage() {
         />
       </div>
 
-      <p className="text-sm text-[var(--foreground)]/60">
+      <p className="rounded-2xl bg-surface-2 px-4 py-3 text-sm text-text-muted">
         {currentStreak === 0
           ? "No active streak yet — log a meal today to start one. Every day is a fresh start."
           : "Keep it going, one day at a time."}
@@ -78,22 +78,29 @@ export default async function InsightsPage() {
 
       <InsightsCharts window7={window7} window30={window30} />
 
-      <div className="grid grid-cols-2 gap-3 text-sm text-[var(--foreground)]/70">
+      <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border bg-surface p-4 text-sm text-text-muted">
         <p>
           Avg intake (7d):{" "}
-          {stats7.averageIntake > 0 ? `${stats7.averageIntake} kcal` : "—"}
+          <span className="num">
+            {stats7.averageIntake > 0 ? `${stats7.averageIntake} kcal` : "—"}
+          </span>
         </p>
-        <p>Days on target (7d): {stats7.daysOnTarget}</p>
+        <p>
+          Days on target (7d):{" "}
+          <span className="num">{stats7.daysOnTarget}</span>
+        </p>
       </div>
-    </main>
+    </div>
   );
 }
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded-lg border border-white/10 p-3">
-      <span className="text-xs text-[var(--foreground)]/60">{label}</span>
-      <span className="text-xl font-semibold">{value}</span>
+    <div className="flex flex-col gap-1 rounded-2xl border border-border bg-surface p-3.5">
+      <span className="text-[11px] font-bold tracking-wide text-text-faint uppercase">
+        {label}
+      </span>
+      <span className="num text-xl font-semibold">{value}</span>
     </div>
   );
 }
