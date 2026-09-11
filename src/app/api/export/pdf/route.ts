@@ -2,16 +2,16 @@ import { NextResponse, type NextRequest } from "next/server";
 import { buildExportDayGroups } from "@/lib/export";
 import { generateExportPdf } from "@/server/export/pdf";
 import { runExportJob } from "@/server/export/job-runner";
-import {
-  ASYNC_JOB_THRESHOLD_DAYS,
-  daysBetweenInclusive,
-  resolveExportRange,
-} from "@/server/export/range";
+import { resolveExportRange, shouldExportAsync } from "@/server/export/range";
 import { getEffectiveUser } from "@/server/dev-bypass";
 import { createExportJob } from "@/server/repositories/export-jobs";
 import { getExportData } from "@/server/repositories/export";
 import { instantToLocalDate } from "@/server/lib/timezone";
 import { getUserById } from "@/server/repositories/users";
+
+// On a serverless host every range is generated inline (see
+// shouldExportAsync) — give a long "all time" export room to finish.
+export const maxDuration = 60;
 
 // The user is derived from the session/dev-bypass only — never from a
 // client-supplied id — and getExportData is scoped to exactly that user.
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     searchParams,
   );
 
-  if (daysBetweenInclusive(fromDate, toDate) > ASYNC_JOB_THRESHOLD_DAYS) {
+  if (shouldExportAsync(fromDate, toDate)) {
     const job = await createExportJob({
       userId: user.id,
       format: "pdf",

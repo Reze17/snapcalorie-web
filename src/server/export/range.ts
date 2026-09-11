@@ -14,6 +14,24 @@ export function daysBetweenInclusive(fromDate: string, toDate: string): number {
   return Math.floor(to.diff(from, "days").days) + 1;
 }
 
+/**
+ * Whether an export of this range should be handed to the detached async
+ * job pipeline (`void runExportJob(...)`) rather than generated inline.
+ *
+ * Large ranges normally go async — EXCEPT on a serverless host, where a
+ * detached promise is not guaranteed to keep running once the HTTP
+ * response is sent (see CLAUDE.md "Export pipeline"). On Vercel
+ * (`process.env.VERCEL === "1"`), or when `EXPORT_FORCE_SYNC=true` is set
+ * explicitly, every export runs synchronously instead; the routes raise
+ * their `maxDuration` so a big range still has time to finish in-request.
+ */
+export function shouldExportAsync(fromDate: string, toDate: string): boolean {
+  if (process.env.VERCEL === "1" || process.env.EXPORT_FORCE_SYNC === "true") {
+    return false;
+  }
+  return daysBetweenInclusive(fromDate, toDate) > ASYNC_JOB_THRESHOLD_DAYS;
+}
+
 function clampDateParam(
   param: string | null,
   fallback: string,
