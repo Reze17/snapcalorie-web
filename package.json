@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "vercel-build": "DATABASE_URL=${DATABASE_URL_UNPOOLED:-$DATABASE_URL} drizzle-kit migrate && next build",
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write .",

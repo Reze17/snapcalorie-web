@@ -431,6 +431,25 @@ docker build -t snapcalorie-web .
 docker run -p 3000:3000 --env-file .env.production snapcalorie-web
 ```
 
+### Deploying to Vercel
+
+Vercel is serverless with no disk and no bundled database, so it needs a
+hosted Postgres and S3-compatible bucket (e.g. Vercel's own Neon/R2
+Marketplace integrations, which auto-inject their own env var names —
+Neon's happens to already be called `DATABASE_URL`; alias any others to
+match "Environment variables" above). Two things only matter on this host:
+
+- **`vercel-build`** (package.json) runs `drizzle-kit migrate` against
+  `DATABASE_URL_UNPOOLED` (falling back to `DATABASE_URL`) before `next
+  build`, since there's no long-lived process to run `npm run db:migrate`
+  from separately — Vercel picks this script up automatically instead of
+  plain `build`. The unpooled URL is used because DDL through a
+  transaction-mode pooler (PgBouncer, which is what Neon's default pooled
+  `DATABASE_URL` goes through) is unreliable for schema migrations.
+- **`EXPORT_FORCE_SYNC`** auto-activates when `VERCEL=1` is set (Vercel
+  sets this itself) — see "Export pipeline" in CLAUDE.md for why the async
+  job path can't be trusted on a serverless host.
+
 ## Phase status
 
 - [x] Phase 0 — Scaffold, tooling & CI
