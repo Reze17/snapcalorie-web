@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import {
   Geist,
   Geist_Mono,
@@ -54,6 +55,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} ${karla.variable} ${plexMono.variable} antialiased`}
       >
         {children}
+        {/* No-op locally / until Web Analytics is enabled on the Vercel
+            project (that toggle needs interactive confirmation, so it's
+            a manual step) — safe to ship unconditionally either way. */}
+        <Analytics />
       </body>
     </html>
   );
