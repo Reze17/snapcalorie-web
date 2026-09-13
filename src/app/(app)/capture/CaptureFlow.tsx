@@ -176,36 +176,50 @@ export function CaptureFlow() {
       {hiddenInputs}
 
       <div
+        onClick={() => (fileInputRef.current || cameraInputRef.current)?.click()}
         onDragOver={(e) => {
           e.preventDefault();
           setIsDragging(true);
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        className={`flex aspect-[4/5] w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-colors ${
+        className={`group flex aspect-[4/5] w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed cursor-pointer transition-all ${
           isDragging
-            ? "border-accent bg-accent-soft"
-            : "border-border bg-surface-2"
+            ? "border-accent bg-accent-soft scale-[1.01]"
+            : "border-border bg-surface-2 hover:bg-surface-3 hover:border-accent/40"
         }`}
       >
-        <div className="h-1/2 w-2/3 rounded-2xl border-2 border-dashed border-text-faint/40" />
+        <div className="flex flex-col items-center gap-4 p-6 text-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-accent/10 text-accent ring-1 ring-accent/20 shadow-md group-hover:scale-105 transition-transform">
+            <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+            </svg>
+          </div>
+          <div>
+            <p className="font-display text-base font-bold text-text">Tap or drop food photo</p>
+            <p className="mt-1 text-xs text-text-muted">Supports camera photos, gallery, or drag & drop</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-center gap-4 pt-2">
+        <button
+          type="button"
+          onClick={() => (cameraInputRef.current || fileInputRef.current)?.click()}
+          className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-accent bg-surface shadow-lg hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+          aria-label="Take photo"
+        >
+          <span className="h-10 w-10 rounded-full bg-accent" />
+        </button>
       </div>
 
       <button
         type="button"
-        onClick={() => cameraInputRef.current?.click()}
-        className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border-4 border-accent bg-surface"
-        aria-label="Take photo"
-      >
-        <span className="h-12 w-12 rounded-full bg-accent" />
-      </button>
-
-      <button
-        type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="mx-auto text-sm font-semibold text-text-muted underline decoration-text-faint underline-offset-4"
+        className="mx-auto text-sm font-semibold text-text-muted hover:text-accent underline decoration-text-faint underline-offset-4 cursor-pointer transition-colors"
       >
-        Upload from gallery
+        Upload from photo gallery
       </button>
 
       {errorMessage && (
@@ -216,3 +230,4 @@ export function CaptureFlow() {
     </div>
   );
 }
+

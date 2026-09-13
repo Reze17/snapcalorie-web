@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { S3_BUCKET, s3Client } from "./s3-client";
+import { isStorageConfigured, S3_BUCKET, s3Client } from "./s3-client";
 
 // Exactly 15 minutes, per FRD §6 Data Privacy — objects are private, and
 // both the upload and any later read must go through short-lived
@@ -32,6 +32,14 @@ export async function createPresignedUploadUrl(
   userId: string,
 ): Promise<PresignedUpload> {
   const key = buildMealImageKey(userId);
+  if (!isStorageConfigured()) {
+    return {
+      key,
+      uploadUrl: `/api/storage/upload?key=${encodeURIComponent(key)}`,
+      expiresInSeconds: PRESIGNED_URL_EXPIRY_SECONDS,
+    };
+  }
+
   const command = new PutObjectCommand({
     Bucket: S3_BUCKET,
     Key: key,
@@ -48,6 +56,9 @@ export async function createPresignedUploadUrl(
  * or individual objects publicly readable.
  */
 export async function createPresignedDownloadUrl(key: string): Promise<string> {
+  if (!isStorageConfigured()) {
+    return `/api/storage/download?key=${encodeURIComponent(key)}`;
+  }
   const command = new GetObjectCommand({ Bucket: S3_BUCKET, Key: key });
   return getSignedUrl(s3Client, command, {
     expiresIn: PRESIGNED_URL_EXPIRY_SECONDS,
@@ -65,6 +76,9 @@ export async function createPresignedExportDownloadUrl(
   filename: string,
   contentType: string,
 ): Promise<string> {
+  if (!isStorageConfigured()) {
+    return `/api/storage/download?key=${encodeURIComponent(key)}`;
+  }
   const command = new GetObjectCommand({
     Bucket: S3_BUCKET,
     Key: key,
@@ -75,3 +89,4 @@ export async function createPresignedExportDownloadUrl(
     expiresIn: PRESIGNED_URL_EXPIRY_SECONDS,
   });
 }
+

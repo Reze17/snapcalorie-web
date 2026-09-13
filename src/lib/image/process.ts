@@ -9,13 +9,18 @@ export interface ProcessedImage {
 }
 
 export function validateImageFile(file: File): void {
-  if (!file.type.startsWith("image/")) {
+  const isImage =
+    file.type.startsWith("image/") ||
+    /\.(jpg|jpeg|png|webp|heic|heif|gif)$/i.test(file.name) ||
+    !file.type;
+  if (!isImage) {
     throw new InvalidFileTypeError(file.type);
   }
   if (file.size > MAX_UPLOAD_BYTES) {
     throw new FileTooLargeError(file.size, MAX_UPLOAD_BYTES);
   }
 }
+
 
 type DrawableImage = ImageBitmap | HTMLImageElement;
 

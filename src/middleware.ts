@@ -63,7 +63,7 @@ function buildCsp(nonce: string): string {
     `font-src 'self' data:`,
     `object-src 'none'`,
     `base-uri 'self'`,
-    `form-action 'self'`,
+    `form-action 'self' https://accounts.google.com`,
     `frame-ancestors 'none'`,
   ].join("; ");
 }
